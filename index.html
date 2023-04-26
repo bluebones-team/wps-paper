@@ -5,11 +5,31 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WPS-Addon</title>
+    <title>wps-addon</title>
 </head>
 
 <body>
-    there is nothing
+    <h1>如果你看到这句话，说明网络没问题</h1>
+    <!-- <a download="jsplugins.xml"></a>
+    <textarea cols="110" rows="5"></textarea>
+    <h4>
+        刷新网页下载文件<br>
+        如果无法下载文件，可以
+        <input type="button" value="复制" onclick="navigator.clipboard.writeText(content).then(e=>alert('复制成功'))">
+        以上文本， 粘贴至新建 txt文件中保存， 文件名改成 jsplugins.xml
+    </h4>
+    <script>
+        function $(Selectors, isAll) {
+            return isAll ? document.querySelectorAll(Selectors) : document.querySelector(Selectors);
+        }
+        let content = `<jsplugins>
+    <jspluginonline name="汇报" type="wpp" url="https://cubxx.github.io/wps-addon/汇报/wps-addon-build/"/>
+    <jspluginonline name="论文" type="wps" url="https://cubxx.github.io/wps-addon/论文/wps-addon-build/"/>
+</jsplugins>`;
+        $('textarea').value = content;
+        $('a').href = URL.createObjectURL(new Blob([content]));
+        confirm(`是否下载安装文件`) && $('a').click();
+    </script> -->
 </body>
 
 </html>

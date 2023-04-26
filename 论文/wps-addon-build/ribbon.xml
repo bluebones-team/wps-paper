@@ -1,0 +1,37 @@
+<customUI xmlns="http://schemas.microsoft.com/office/2006/01/customui" onLoad="Paper_onload">
+    <ribbon startFromScratch="false">
+        <tabs>
+            <tab id="wpsAddinTab" label="论文">
+                <group id="Refer_grp" label="参考文献">
+                    <button id="format" label="索引格式检查" onAction="CheckIndexFormat" enabled="true" imageMso="Spelling" size="large"/>
+                    <button id="up_err" label="" onAction="CheckIndexFormat" enabled="true" imageMso="OutlineMoveUp" size="small"/>
+                    <button id="down_err" label="" onAction="CheckIndexFormat" enabled="true" imageMso="OutlineMoveDown" size="small"/>
+                    <button id="context" label="上下文核对" onAction="CheckContext" enabled="true" imageMso="FormControlCheckBox" size="large"/>
+                </group>
+                <group id="Result_grp" label="结果">
+                    <comboBox id="" label="统计方法" onChange="pickMethod" sizeString="0000000">
+                        <item id="item1" label="独立T检验" />
+                        <item id="item2" label="配对T检验" />
+                        <item id="item3" label="单因素ANOVA" />
+                        <item id="item4" label="多因素ANOVA" />
+                        <item id="item5" label="多元ANOVA" />
+                    </comboBox>
+                    <button id="write" label="撰写结果" onAction="writeResult" enabled="true" imageMso="CharacterBorder" size="large"/>
+                    <button id="" label="" onAction="" enabled="false" imageMso="" size="small"/>
+                </group>
+                <group id="Chart_grp" label="图表">
+                    <button id="figure" label="作图" onAction="addFigure" enabled="true" imageMso="ChartInsert" size="large"/>
+                    <button id="table" label="作表" onAction="addTable" enabled="true" imageMso="TableDesign" size="large"/>
+                    <button id="flowChart" label="流程图" onAction="addFlowChart" enabled="false" imageMso="TracePrecedents" size="large"/>
+                </group>
+                <group  id="Other_grp" label="其他">
+                    <button id="frame" label="创建框架" onAction="createFrame" enabled="true" imageMso="Zoom100" size="large"/>
+                    <button id="identify" label="识别大纲" onAction="identifyOutline" enabled="true" imageMso="XmlStructure" size="small"/>
+                    <button id="test" label="测试" onAction="test" enabled="true" imageMso="Text" size="small"/>
+                    <!-- <button id="btnIsEnbable" label="全文" enabled="false" imageMso="Text" size="small"/> -->
+                    <button id="TaskPane" label="帮助" onAction="ShowHelp" enabled="true" imageMso="Help" size="large"/>
+                </group>
+            </tab>
+        </tabs>
+    </ribbon>
+</customUI>

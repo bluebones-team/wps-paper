@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>撰写结果工具</title>
+    <style>
+        * {
+            font-weight: 900;
+            transition: 300ms;
+        }
+
+        *:disabled {
+            opacity: 0.5;
+        }
+
+        body {
+            margin: 20px;
+            background-color: #fff;
+        }
+
+        input {
+            margin: 6px 0px 0px 10px;
+            width: calc(100% - 10px);
+            max-width: 100px;
+            padding: 5px;
+            border-radius: 5px;
+            border: 1px solid #000;
+            background-color: #fff;
+            font-size: medium;
+            outline: none;
+        }
+
+        input::placeholder {
+            color: #0008;
+        }
+
+        label {
+            display: inline-block;
+            width: 100px;
+            text-align: center;
+            font-size: large;
+        }
+
+        textarea {
+            display: none;
+        }
+
+        /* 容器样式 */
+        #plus-tools,
+        #base,
+        #MSDtable,
+        #Ttest,
+        #Ftest,
+        .post,
+        .simple,
+        #output {
+            display: flex;
+            width: fit-content;
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 2px solid #000;
+            border-radius: 15px;
+        }
+
+        #MSDtable span textarea,
+        #Ttest span textarea,
+        #Ftest span textarea {
+            display: inline-block;
+        }
+
+        /* base样式 */
+        #base {
+            flex-wrap: wrap;
+        }
+
+        #dep,
+        #indep {
+            display: flex;
+            flex-direction: column;
+            margin: 5px;
+        }
+
+        #dep label,
+        #indep label {
+            margin-right: 10px;
+        }
+
+        #dep>input,
+        #indep>div {
+            display: flex;
+            flex-wrap: wrap;
+            margin-left: 20px;
+        }
+
+        /* 工具栏样式 */
+        .tools {
+            display: flex;
+            align-items: center;
+        }
+
+        .tools input {
+            margin-left: 5px;
+            width: 25px;
+            height: 25px;
+            color: #000;
+            font-size: large;
+            line-height: 10px;
+            cursor: pointer;
+        }
+
+        .tools input:disabled {
+            background-color: #fff;
+            cursor: default;
+        }
+
+        /* MSDtable样式 */
+        #MSDtable {
+            margin-bottom: 20px;
+        }
+
+        #MSDtable table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        #MSDtable th,
+        #MSDtable td {
+            /* border: 1px solid #000; */
+            padding: 5px;
+            text-align: center;
+        }
+
+        #MSDtable th:first-child,
+        #MSDtable td:first-child {
+            background-color: #eee;
+        }
+
+        #MSDtable .MSD input {
+            margin: 0 3px;
+        }
+
+        /* 编辑按钮样式 */
+        .editor {
+            display: flex;
+            align-items: center;
+            flex-direction: column-reverse;
+            justify-content: space-between;
+            margin-left: 10px;
+        }
+
+        .editor input {
+            width: 80px;
+            border-radius: 15px;
+            cursor: pointer;
+        }
+
+        .editor input:hover {
+            background-color: #ccc;
+        }
+
+        .editor textarea {
+            width: 80px;
+            padding: 5px;
+            border-radius: 5px;
+            border: 1px solid black;
+            outline: none;
+            transition: none;
+        }
+
+        /* 输出 */
+        #output {
+            max-width: 400px;
+            /* float: right; */
+        }
+
+        #output_content {
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #000;
+            outline: none;
+            background-color: #fff;
+        }
+
+        #output_content[contentEditable=false] {
+            background-color: #eee;
+        }
+
+        /* 网页工具 */
+        #plus-tools {
+            /* width: calc(100% - 20px); */
+            display: flex;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+
+        #plus-tools * {
+            display: inline-block;
+            margin: 0 5px;
+            border-radius: 5px;
+            padding: 5px;
+        }
+
+        #plus-tools input {
+            cursor: pointer;
+            text-align: center;
+            width: 80px;
+            border-radius: 15px;
+        }
+
+        #debugInfo {
+            color: red;
+            font-size: small;
+            list-style-type: none;
+            background-color: #fff;
+            flex: 1;
+        }
+
+        #debugInfo li {
+            display: block;
+            border-bottom: 1px solid #000;
+            margin: 0;
+            padding: 5px 0 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="plus-tools">
+        <input type="button" value="反色模式"
+            onclick="window.$('html,#output_content',1).forEach(e=>e.style.or('filter', 'invert(1)', ''));"></input>
+        <ul id="debugInfo"></ul>
+    </div>
+    <ul id="datalists"></ul>
+    <script>
+        const _appendChild = Node.prototype.appendChild;
+        Object.assign(Object.prototype, {
+            or: function (key, a, b) { let logic = this[key] == a; this[key] = logic ? b : a; return logic },
+            $: function (Selectors, isAll) {
+                let _this = this == window ? document : this;
+                return isAll ? _this.querySelectorAll(Selectors) : _this.querySelector(Selectors);
+            },
+            mean: function (key) { let sum = 0; this.forEach(e => sum += e[key]); return sum / this.length }
+        })
+        Object.assign(HTMLInputElement.prototype, {
+            add: function (max = 10) {
+                let tree = this.parentElement.parentElement;
+                let source = tree.lastElementChild;
+                if (tree.childElementCount < max) {
+                    tree.appendChild(Object.assign(source.cloneNode(true), {
+                        id: indexPlus(source.id),
+                        placeholder: indexPlus(source.placeholder),
+                        title: indexPlus(source.title),
+                        value: indexPlus(source.value),
+                    }));
+                }
+            },
+            dec: function (min = 2) {
+                let tree = this.parentElement.parentElement;
+                if (tree.childElementCount > min) tree.lastElementChild.remove();
+            },
+        });
+        Object.assign(HTMLDivElement.prototype, {
+            init: function (func) {
+                this.editor = this.addEditor(this.check, this.edit);
+                this.datas = this.datas || function () { return [this] };
+                this.updata && this.updata();
+                func && func.call(this);
+                return this;
+            },
+            readTextareaData: function () {
+                let textarea = this.editor.$('textarea');
+                let text = textarea.value.replace(/ +/g, ''),
+                    arr = text.replace(/\n$/, '').split('\n').map(e => e.split('\t'));
+                textarea.value = '';
+                if (arr[1]) {
+                    let list = this.datas().map(e => e.$('input', true));
+                    arr.forEach((e, r) => {
+                        e.forEach((ee, c) => { if (list[r] && list[r][c]) list[r][c].value = ee; });
+                    });
+                }
+            },
+            check: function () {
+                this.readTextareaData();
+                let errInput = [];
+                let colors = function (isOK) {
+                    isOK = isOK + 0;
+                    if ($('html').style.filter) return ['#0ff7', '#f0f7'][isOK]; // dark 模式
+                    else return ['#f005', '#0f05'][isOK];;
+                };
+                this.datas().forEach(e => e.$('input', true).forEach(ee => {
+                    if (ee.type != 'button') ee.style.backgroundColor = colors(true);
+                    if (['', NaN, undefined].includes(ee.value)) errInput.push(ee);
+                }));
+                if (errInput[0]) errInput.forEach(e => e.style.backgroundColor = colors(false));
+                else this.confirm();
+            },
+            edit: function () {
+                this.datas().forEach(e => e.$('input', true).forEach(ee => {
+                    ee.style.backgroundColor = '';
+                }));
+            },
+        });
+        Object.assign(Node.prototype, {
+            addTools: function (max, min) {
+                return this.insertBefore(addElm('span', {
+                    id: `${this.id}_tools`,
+                    className: 'tools',
+                    innerHTML: `<input class="add" type="button" value="+" onclick="this.add(${max})">
+                                <input class="dec" type="button" value="-" onclick="this.dec(${min})">`,
+                }), this.children[0]);
+            },
+            addEditor: function (func1 = () => { }, func2 = () => { }) {
+                let _this = this;
+                let elm = this.appendChild(addElm('span', {
+                    id: `${this.id}_editor`,
+                    className: 'editor',
+                    innerHTML: `<input type="button" value="确认" onclick="this.handle()">
+                                <textarea cols="2" rows="1"></textarea>`,
+                }));
+                elm.$('input').handle = function () {
+                    [..._this.$('input', true)].filter(e => e.id || e.className).forEach(e => e.disabled = !e.disabled);
+                    elm.$('textarea').or('disabled', true, false);
+                    elm.$('textarea').style.or('resize', '', 'none');
+                    this.or('value', '确认', '编辑') ? func1.call(_this) : func2.call(_this);
+                    isOutput.call(_this);
+                };
+                return elm;
+            },
+            appendChild: function (node) {
+                let o = node.id && $(`#${node.id}`);
+                if (!o) return _appendChild.call(this, node);
+                else console.log(`id 已存在`, o);
+                return o;
+            },
+        });
+        window.onerror = function (...e) {
+            $('#debugInfo').appendChild(addElm('li', { innerHTML: `${e[2]}&nbsp;&nbsp;&nbsp;${e[0]}` }));
+        }
+        addBase();
+
+        // 通用
+        function addElm(tag, config) { return Object.assign(document.createElement(tag), config) }
+        function datalist(id, arr, func = e => e) {
+            return `<datalist id="${id}">
+                ${arr.map((e, i) => `<option value="${func(e)}" index="${i}"></option>`).join('')}
+                </datalist>`;
+        }
+        function writeData(e) {
+            // 数据写入对象
+            let id = e.id.match(/^(i\d(×i\d)?)_data$/)[1];
+            [...e.children].forEach(ee => {
+                if (ee.tagName == 'INPUT') {
+                    if (!window[id]) {
+                        // 创建 交互变量
+                        window[id] = { name: `${id.split('×').map(e => window[e].name).join('×')}` }
+                        window['ias'].push(window[id]);
+                    };
+                    window[id][ee.id.match(/^i\d(×i\d)?_(.*)$/)[2]] = parseFloat(ee.value);
+                }
+            });
+            return id;
+        }
+        function indexPlus(attribute) {
+            if (attribute) {
+                let index = parseInt(attribute.slice(-1));
+                if (!isNaN(index)) return attribute.slice(0, -1) + (index + 1);
+            }
+            return ''
+        }
+        // 组件
+        function addBase() {
+            return $('body').appendChild(addElm('div', {
+                id: 'base',
+                innerHTML: `<div id="dep"><input id="dep1" type="text" placeholder="因变量1"></div>
+                            <div id="indep"><div id="indep1" title="自变量1">
+                                <input class="indep_name" type="text" placeholder="自变量">
+                                <input class="indep_level" type="text" placeholder="水平1">
+                                <input class="indep_level" type="text" placeholder="水平2">
+                            </div></div>`,
+                confirm: function () {
+                    // 清空变量
+                    window['is'] = []; window['ds'] = []; window['ias'] = [];
+                    Object.keys(window).forEach(e => { /^[id]\d$/.test(e) && delete window[e] });
+                    // 赋值变量
+                    for (let i = 1; i <= $('#dep').childElementCount - 1; i++) {
+                        let obj = { id: `d${i}`, elm: $(`#dep${i}`) };
+                        window['ds'].push(window[obj.id] = Object.assign(obj, {
+                            name: obj.elm.value
+                        }));
+                    }
+                    for (let i = 1; i <= $('#indep').childElementCount - 1; i++) {
+                        let obj = { id: `i${i}`, elm: $(`#indep${i}`) };
+                        window['is'].push(window[obj.id] = Object.assign(obj, {
+                            name: obj.elm.children[1].value,
+                            ls: [...obj.elm.children].slice(2).map(e => e.value),
+                        }));
+                    }
+                    // 更新 datalist
+                    $('#datalists').innerHTML = '';
+                    is.forEach(e => $('#datalists').innerHTML += datalist(`${e.id}_ls`, e.ls));
+                    // 更新dom
+                    [...$('#base ~ *', 1)].forEach(e => {
+                        if (e.tagName == 'DIV') e.remove(); // 移除 #base以下的div元素
+                    });
+                    addMSDtable();
+                    if (is.length + i1.ls.length == 3) addTtest();
+                    else addFtest();
+                },
+            })).init(function () {
+                $('#dep').addTools();
+                $('#indep').addTools();
+                $('#indep1').addTools(11, 4);
+            });
+        }
+        function addMSDtable() {
+            function MSDdata(id) {
+                return `<td id=${id} class="MSD">
+                    <input id=${id}_M type="number" step="0.01" placeholder="M">
+                    <input id=${id}_SD type="number" step="0.01" placeholder="SD"></td>`
+            }
+            return $('body').appendChild(addElm('div', {
+                id: `MSDtable`,
+                innerHTML: `<table id="MSDtable_body"></table>`,
+                datas: function () { return [...$('#MSDtable_body').$('tbody').children] },
+                confirm: function () {
+                    this.readTextareaData();
+                    // 写入数据
+                    let dataArr = this.datas().map(e => {
+                        let row = [...e.$('.MSD', true)].map(ee => {
+                            return {
+                                M: parseFloat(ee.children[0].value),
+                                SD: parseFloat(ee.children[1].value)
+                            }
+                        });
+                        return [...row, { M: row.mean('M'), SD: row.mean('SD') }]
+                    });
+                    let i2 = window['i2'] || { ls: [] };
+                    window['MSDtable'] = {
+                        rows: [...i2.ls, 'mean'],
+                        columns: [...i1.ls, 'mean'],
+                        data: [...dataArr, dataArr[0].map((e, i) => {
+                            return {
+                                M: dataArr.map(ee => ee[i]).mean('M'),
+                                SD: dataArr.map(ee => ee[i]).mean('SD')
+                            }
+                        })]
+                    };
+                },
+                updata: function () {
+                    let trh, trb;
+                    if (window['i2']) {
+                        trh = `<tr>${[
+                            `<th>${i2.name}\\${i1.name}</th>`,
+                            ...i1.ls.map((e, i) => `<th id="i1l${i + 1}">${e}</th>`)
+                        ].join('')}</tr>`;
+                        trb = i2.ls.map((e, i) => `<tr><th id="i2l${i + 1}">${e}</th>\
+                    ${i1.ls.map((ee, j) => MSDdata('i2l' + (i + 1) + '&i1l' + (j + 1))).join('')}\
+                    </tr>`).join('');
+                    } else {
+                        trh = `<tr>${[
+                            `<th>\\${i1.name}</th>`,
+                            ...i1.ls.map((e, i) => `<th id="i1l${i + 1}">${e}</th>`)
+                        ].join('')}</tr>`;
+                        trb = `<tr><th></th>\
+                    ${i1.ls.map((ee, j) => MSDdata('i1l' + (j + 1))).join('')}\
+                    </tr>`;
+                    };
+                    $('#MSDtable_body').innerHTML = `<thead>${trh}</thead><tbody>${trb}</tbody>`;
+                },
+            })).init();
+        }
+        function addTtest() {
+            function Tdata(id) {
+                return `<div id="${id}_data">
+                    <label for="${id}">${window[id].name}</label>
+                    <input id="${id}_t" type="number" step="0.01" placeholder="t值">
+                    <input id="${id}_df" type="number" placeholder="自由度">
+                    <input id="${id}_p" type="number" step="0.01" placeholder="p值">
+                    <input id="${id}_Cohen_d" type="number" step="0.01" placeholder="Cohen d">
+                    <input id="${id}_CI_L" type="number" step="0.01" placeholder="90%CI下限">
+                    <input id="${id}_CI_U" type="number" step="0.01" placeholder="90%CI上限">
+                </div>`
+            }
+            return $('body').appendChild(addElm('div', {
+                id: 'Ttest',
+                innerHTML: `<div id="Ttest_body"></div>`,
+                datas: function () { return [...$('#Ttest_body').children] },
+                updata: function () {
+                    $('#Ttest_body').innerHTML = Tdata('i1');
+                },
+                confirm: function () {
+                    this.readTextareaData();
+                    this.datas().forEach(writeData);
+                }
+            })).init();
+        }
+        function addFtest() {
+            function Fdata(id, name) {
+                name = name || window[id].name;
+                return `<div id="${id}_data">
+                    <label for="${id}">${name}</label>
+                    <input id="${id}_F" type="number" step="0.01" placeholder="F值">
+                    <input id="${id}_df1" type="number" placeholder="自由度1">
+                    <input id="${id}_df2" type="number" placeholder="自由度2">
+                    <input id="${id}_p" type="number" step="0.01" placeholder="p值">
+                    <input id="${id}_eta2" type="number" step="0.01" placeholder="η2">
+                    <input id="${id}_CI_L" type="number" step="0.01" placeholder="CI下限">
+                    <input id="${id}_CI_U" type="number" step="0.01" placeholder="CI上限">
+                </div>`
+            }
+            return $('body').appendChild(addElm('div', {
+                id: 'Ftest',
+                innerHTML: `<div id="Ftest_body"></div>`,
+                datas: function () { return [...$('#Ftest_body').children] },
+                confirm: function () {
+                    this.readTextareaData();
+                    // 删除dom
+                    [...$('body').children].forEach(e => {
+                        /^(post|simple)$/.test(e.className) && e.remove();
+                    });
+                    this.datas().map(e => {
+                        let id = writeData(e);
+                        // 添加dom
+                        if (window[id].p < 0.05) {
+                            if (id.includes('×')) addSimple(id);
+                            else if (window[id].ls.length > 2) addPost(id);
+                        }
+                    });
+                },
+                updata: function () {
+                    let indepData = is.map((e, i) => Fdata(`i${i + 1}`)).join('');
+                    let interactData = [];
+                    for (let i = 0; i < is.length; i++) { // C2n
+                        for (let j = i + 1; j < is.length; j++) {
+                            interactData.push(Fdata(`i${i + 1}×i${j + 1}`, `${is[i].name}×${is[j].name}`));
+                        }
+                    }
+                    $('#Ftest_body').innerHTML = indepData + interactData.join('');
+                },
+            })).init();
+        }
+        function addPost(id) {
+            return $('body').appendChild(addElm('div', {
+                id: `${id}_post`,
+                className: 'post',
+                title: `${id} 事后检验`,
+                innerHTML: `<label for="${id}">${window[id].name}</label>
+                    <input id="${id}_post_l1" type="text" list="${id}_ls" placeholder="水平1">
+                    <input id="${id}_post_l2" type="text" list="${id}_ls" placeholder="水平2">
+                    <input id="${id}_post_p" type="number" step="0.01" placeholder="p值">`,
+                confirm: function () {
+                    let id = this.id.match(/^(i\d)_post$/)[1];
+                    window[id]['post'] = {};
+                    [...this.$('input', true)].forEach(e => {
+                        if (e.id) window[id]['post'][e.id.match(/post_(.*)$/)[1]] = e.value;
+                    });
+                    window[id]['post']['p'] = parseFloat(window[id]['post']['p']);
+                },
+            })).init();
+        }
+        function addSimple(id) {
+            let ids = id.split('×');
+            return $('body').appendChild(addElm('div', {
+                id: `${id}_simple`,
+                className: 'simple',
+                title: `${id} 简单效应分析`,
+                innerHTML: `<label for="${id}">${window[id].name}</label>
+                    <input id="${id}_simple_fixed_i" type="text" placeholder="固定自变量">
+                    <input id="${id}_simple_fixed_il" type="text" placeholder="固定水平"><br>
+                    <input id="${id}_simple_l1" type="text" placeholder="水平1">
+                    <input id="${id}_simple_l2" type="text" placeholder="水平2">
+                    <input id="${id}_simple_p" type="number" step="0.01" placeholder="p值">`,
+                confirm: function () {
+                    let id = this.id.match(/^(i\d×i\d)_simple$/)[1];
+                    window[id]['simple'] = {};
+                    [...this.$('input', true)].forEach(e => {
+                        if (e.id) window[id]['simple'][e.id.match(/simple_(.*)$/)[1]] = e.value;
+                    });
+                    window[id]['simple']['p'] = parseFloat(window[id]['simple']['p']);
+                },
+            })).init(function () {
+                // input-datalist 链接
+                let id = this.id.match(/^(i\d×i\d)_simple$/)[1];
+                let ids = id.split('×');
+                $('#datalists').innerHTML += datalist(`${id}_is`, id.split('×'), e => window[e].name);
+                this.$('input').setAttribute('list', `${id}_is`);
+                // 输入事件
+                this.$('input').onchange = function () {
+                    if (this.value) {
+                        let i = [...this.list.options].indexOf($(`option[value=${this.value}]`));
+                        $(`#${id}_simple_fixed_il`).setAttribute('list', `${ids[i]}_ls`);
+                        $(`#${id}_simple_l1`).setAttribute('list', `${ids[!i + 0]}_ls`);
+                        $(`#${id}_simple_l2`).setAttribute('list', `${ids[!i + 0]}_ls`);
+                    } else {
+                        $(`#${id}_simple_fixed_il`).removeAttribute('list');
+                        $(`#${id}_simple_l1`).removeAttribute('list');
+                        $(`#${id}_simple_l2`).removeAttribute('list');
+                    }
+                };
+            });
+        }
+
+        // 输出
+        function addOutput() {
+            // 添加元素
+            return $('body').appendChild(addElm('div', {
+                id: 'output',
+                innerHTML: `<div id="output_content" contenteditable></div>`,
+                confirm: function () {
+                    // 复制文本
+                    $('#output_content').contentEditable = false;
+                    let { innerText, innerHTML } = $('#output_content');
+                    navigator.clipboard.write([
+                        new ClipboardItem({
+                            'text/plain': new Blob([innerText], { type: 'text/plain' }),
+                            'text/html': new Blob([innerHTML], { type: 'text/html' }),
+                        })
+                    ]).then(e => alert('复制成功'));
+                },
+                edit: function () {
+                    // 编辑文本
+                    $('#output_content').contentEditable = true;
+                    $('#output_content').focus();
+                },
+                updata: function () {
+                    function txt(text, tag, style = "") {
+                        switch (tag) {
+                            case 'p': style += `font-family: 'Times New Roman','宋体';font-size: 10.5pt;font-weight: normal;text-indent: 2em;margin: 0;line-height: 1.5;`; break;
+                            default: break;
+                        }
+                        return `<${tag} style="${style}">${text}</${tag}>`
+                    }
+                    function MSD(...level) {
+                        let MSDtable = window['MSDtable'];
+                        let In = e => e != -1 ? true : false;
+                        let w = MSDtable.rows.indexOf(level[0]),
+                            h = MSDtable.columns.indexOf(level[0]);
+                        if (In(w) == In(h)) {
+                            alert(`MSDtable找不到 ${level[0]}`);
+                        } else if (In(w)) {
+                            h = MSDtable.columns.indexOf(level[1] || 'mean');
+                            In(h) || alert(`MSDtable找不到 ${level[1]}`);
+                        } else {
+                            w = MSDtable.rows.indexOf(level[1] || 'mean');
+                            In(w) || alert(`MSDtable找不到 ${level[1]}`);
+                        }
+                        let { M, SD } = MSDtable.data[w][h];
+                        return {
+                            M: M, SD: SD,
+                            text: `(M = ${M.toFixed(2)}, SD = ${SD.toFixed(2)})`
+                        }
+                    }
+                    function base(is) {
+                        let indepInfo = is.map(({ name, ls }) => `${ls.length}(${name}: ${ls.join(' / ')})`);
+                        return `对${dep}采用${is.length > 1 ? indepInfo.join('×') : ''}${method}`
+                    }
+                    function Ttest({ ls, t, df, p, Cohen_d, CI_L, CI_U }) {
+                        let [l1, l2] = ls;
+                        let msd1 = MSD(l1), msd2 = MSD(l2);
+                        let sign = p < 0.05 ?
+                            `${l1}的${dep}${msd1.text}显著${ifRes('M', msd1, msd2)}${l2}${msd2.text}` :
+                            `${l1}的${dep}${msd1.text}与${l2}${msd2.text}无显著差异`;
+                        return `${sign}, t(${df}) = ${t.toFixed(2)}, ${ifRes('p**', p)}, Cohen d = ${Cohen_d.toFixed(2)}, 90%CI[${`${CI_L.toFixed(2)}, ${CI_U.toFixed(2)}`}]`
+                    }
+                    function Ftest({ name, F, df1, df2, p, eta2, CI_L, CI_U }) {
+                        return `${ifRes('interact', name)}${ifRes('p*', p)}, F(${df1}, ${df2}) = ${F.toFixed(2)}, ${ifRes('p**', p)}, η2 = ${eta2.toFixed(2)}, 90%CI[${`${CI_L.toFixed(2)}, ${CI_U.toFixed(2)}`}]`
+                    }
+                    function post({ l1, l2, p }) {
+                        let msd1 = MSD(l1), msd2 = MSD(l2);
+                        return `${l1}的${dep}${msd1.text}显著${ifRes('M', msd1, msd2)}${l2}${msd2.text}, ${ifRes('p**', p)}`
+                    }
+                    function simple({ l1, l2, p, fixed_i, fixed_il }) {
+                        let msd1 = MSD(fixed_il, l1), msd2 = MSD(fixed_il, l2);
+                        return `${fixed_i}为${fixed_il}时，${l1}的${dep}${msd1.text}显著${ifRes('M', msd1, msd2)}${l2}${msd2.text}, ${ifRes('p**', p)}`
+                    }
+                    function ifRes(type, arg1, arg2) {
+                        //判断输出
+                        switch (type) {
+                            case 'p**': return arg1 == 0 ? 'p < 0.001' : 'p = ' + arg1.toFixed(3);
+                            case 'p*': return arg1 < 0.05 ? '显著' : '不显著';
+                            case 'M': return arg1.M > arg2.M ? '大于' : '小于';
+                            case 'interact': {
+                                let names = arg1.split('×');
+                                return names[1] ? `${arg1}交互作用` : arg1 + '主效应';
+                            }
+                            default: break;
+                        }
+                    }
+                    // 生成文本
+                    var dep = ds[0].name, method = 't检验';
+                    if ($('#Ftest')) method = `${'0单双'[is.length] || '多'}因素方差分析`;
+                    let text = txt(`${base(is)}。结果发现，${[...is, ...ias].map($('#Ftest') ? Ftest : Ttest).join('；')}。`, 'p');
+                    if ($('.post')) text += txt(`事后检验发现，${is.filter(e => e.post).map(e => post(e.post)).join('；')}。`, 'p');
+                    if ($('.simple')) text += txt(`简单效应分析发现，${ias.filter(e => e.simple).map(e => simple(e.simple)).join('；')}。`, 'p');
+                    text = text.replace(/\u03B7(2)/g, `\u03B7${txt('$1', 'sup')}`)
+                        .replace(/\s(F|p|\u03B7|t|d|SD)/g, ` ${txt('$1', 'i')}`)
+                        .replace(/%(CI)\[/g, `%${txt('$1', 'i')}[`)
+                        .replace(/\((M)/g, `(${txt('$1', 'i')}`)
+                        .replace(/(t|F)检验/g, `${txt('$1', 'i')}检验`);
+                    $('#output_content').innerHTML = text;
+                }
+            })).init(function () {
+                $('#output_content').focus();
+                if ($('html').style.filter) $('#output_content').style.filter = 'invert(1)';
+            });
+        }
+        function isOutput() {
+            // 判断是否输出
+            if (this.id != 'output') {
+                let divs = $('body script ~ div:not(#output)', true);
+                if (divs.length < 3) return false;
+                let isComplete = true;
+                divs.forEach(e => isComplete *= (e.$('.editor input').value == '编辑'));
+                if (isComplete) {
+                    $('#output') ? $('#output').updata() : addOutput().$('#output_content').focus();
+                }
+            }
+        }
+
+    </script>
+</body>
+
+</html>

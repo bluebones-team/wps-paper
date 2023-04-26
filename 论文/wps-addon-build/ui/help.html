@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <script type="text/javascript" src="../js/util.js"></script>
+    <script>
+        var apa = 'https://apastyle.apa.org/style-grammar-guidelines/references/elements-list-entry',
+            aps = 'https://journal.psych.ac.cn/xlxb/fileup/0439-755X/ITEM/20220223114333.pdf';
+        var help = 'https://github.com/Cubxx/wps-addon/blob/main/论文/Regexp.md',
+            mailto = `mailto:1000502425@smail.shnu.edu.cn?subject=%5BWPS-addon-paper%5DAdvice&body=`;
+    </script>
+    <style>
+        :root {
+            --primary-color: #444;
+            --secondary-color: #666;
+            --accent-color: #eee;
+        }
+
+        /* 背景颜色和字体 */
+        body {
+            background-color: var(--accent-color) !important;
+            font-family: "微软雅黑" !important;
+            padding: 0 !important;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        cite {
+            display: block;
+            text-align: center;
+            font-size: 1px;
+        }
+
+        /* 表单 */
+        form {
+            margin: 20px;
+            padding: 0;
+            border: 1px solid var(--primary-color);
+            border-radius: 15px;
+            background-color: #fff;
+            box-shadow: 0 0 5px var(--primary-color);
+            position: absolute;
+            left: -280px;
+            top: 0;
+            z-index: 1;
+            transition: 0.5s cubic-bezier(0.22, 0.61, 0.36, 1);
+        }
+
+        form:hover {
+            left: -20px
+        }
+
+        /* 输入框 */
+        form>textarea {
+            padding: 10px;
+            border: none;
+            outline: none;
+            border-radius: 15px;
+            width: 100%;
+            box-sizing: border-box;
+            font-size: 16px;
+            font-family: 微软雅黑;
+            resize: vertical;
+        }
+
+        textarea::-webkit-input-placeholder {
+            font-family: 微软雅黑;
+        }
+
+        /* 提交按钮 */
+        form>input[type="submit"] {
+            background: var(--primary-color);
+            padding: 10px 20px;
+            border: none;
+            border-radius: 15px;
+            width: 100%;
+            cursor: pointer;
+            font-size: 16px;
+            color: var(--accent-color);
+            transition: background-color 0.2s ease-in-out;
+        }
+
+        form>input[type="submit"]:hover {
+            background-color: var(--secondary-color);
+        }
+
+        /* 引用列表 */
+        #refer {
+            padding: 0px;
+            margin: 10px;
+        }
+
+        #refer>li {
+            position: relative;
+            top: 0px;
+            list-style-type: none;
+            font-weight: lighter;
+            text-align: center;
+            background-color: #fff;
+            box-shadow: 0 0 8px var(--primary-color);
+            border-radius: 15px;
+            padding: 10px;
+            margin: auto;
+            width: 80%;
+            margin-bottom: -5px;
+            transition: 0.2s ease-in-out;
+        }
+
+        #refer>li:hover {
+            top: -8px;
+            font-weight: normal;
+            /* background-color: var(--accent-color); */
+        }
+
+        /* 内容区域 */
+        #content {
+            background-color: #fff;
+            box-shadow: 0 0 8px var(--primary-color);
+            margin: 20px;
+            padding: 20px;
+            border-radius: 15px;
+            width: auto;
+            color: #333;
+            font-size: unset;
+        }
+
+        /* 加载信息 */
+        #info {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        /* md部分 */
+        blockquote {
+            font-size: small !important;
+        }
+
+        th,
+        td {
+            text-align: center !important;
+            padding: 0 10px !important;
+        }
+    </style>
+</head>
+
+<body>
+    <form action>
+        <textarea type="text" placeholder="在此输入你的建议..."></textarea>
+        <input type="submit" value="提交"
+            onclick="shellExecuteByOAAssist(`${mailto+this.previousElementSibling.value.replace(/\n/g,'%0D%0A')}%0D%0A%0D%0A===<以下为调试信息>===%0D%0A${info.innerHTML}`)">
+    </form>
+    <span name="刷新" style="height: 20px;cursor: pointer;" onclick="location.reload()"></span>
+    <cite>--- 2023.4.15 新增两个功能 更新帮助文档 </cite>
+    <ul id="refer">
+        <li onclick="shellExecuteByOAAssist(apa)">APA格式官网</li>
+        <li onclick="shellExecuteByOAAssist(aps)">《心理学报》索引格式</li>
+        <li onclick="shellExecuteByOAAssist(help)">帮助文档网址</li>
+    </ul>
+    <xmp id="content" theme="yeti" style></xmp>
+    <!-- 调试信息 -->
+    <span id="info" style="font-size: small;">
+        <hr>
+    </span>
+    <script>
+        //调试信息
+        var info = document.getElementById('info');
+        info.add = function (text, tag) {
+            if (tag) text = `<${tag}>${text}</${tag}>`;
+            info.innerHTML += `<br>${text}`;
+        };
+        info.err = function (msg, line = '') {
+            info.innerHTML += `<br><i style='color: red;'>${line}&emsp;${msg}<i>`;
+        }
+        addEventListener('error', err => info.err(err.message, err.lineno));
+        addEventListener('unhandledrejection', ({ reason }) => { //捕获promise错误
+            info.err(reason.toString(), reason.stack.split(':').reverse()[1]);
+        });
+        //添加script标签
+        async function addScript(src) {
+            let name = src.split('/').pop();
+            info.add(`正在加载&emsp;${name}...`);
+            return new Promise((resolve, reject) => {
+                let elm = Object.assign(document.createElement('script'), {
+                    src: src,
+                    type: "text/javascript",
+                    onload: function () {
+                        info.add(`${name}&emsp;加载成功`);
+                        resolve();
+                    },
+                    onerror: function () {
+                        info.err(`${name}&emsp;加载失败`);
+                        info.add(`<a href=${src}>${src}</a>`, 'cite');
+                        reject();
+                    }
+                });
+                document.head.appendChild(elm);
+            });
+        }
+        //请求文件
+        let file = 'https://cubxx.github.io/wps-addon/论文/Regexp.md';
+        Promise.all([
+            addScript("https://unpkg.com/marked/lib/marked.umd.js"),
+            addScript("https://cdn.jsdelivr.net/gh/Naereen/StrapDown.js/strapdown.min.js")
+            // http://yieme.github.io/strapdown/dist/strapdown.js
+        ]).then(() => {
+            info.add('正在连接Github...');
+            fetch(file).then(res => {
+                if (res.ok) {
+                    res.text().then(text => {
+                        info.add('连接Github成功');
+                        document.getElementById('content').innerHTML = marked.parse(text);
+                        info.style.display = 'none';
+                    });
+                } else {
+                    info.err(`连接Github失败&emsp;${res.status}`);
+                    info.add(`<a href=${file}>${file}</a>`, 'cite');
+                    info.add('请尝试科学上网', 'h2');
+                }
+            }, err => {
+                info.err(err.stack); // TypeError: Failed to fetch ...
+                info.add(`<a href=${file}>${file}</a>`, 'cite');
+                info.add('文件网址错误', 'h2');
+            });
+        }, () => {
+            info.add('资源请求错误<br><h3>请查看帮助文档网址</h3>', 'h2');
+        });
+    </script>
+</body>
+
+</html>
