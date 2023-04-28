@@ -1,4 +1,4 @@
 <jsplugins>
-    <jspluginonline name="汇报" type="wpp" url="https://cubxx.github.io/wps-addon/汇报/wps-addon-build/"/>
-    <jspluginonline name="论文" type="wps" url="https://cubxx.github.io/wps-addon/论文/wps-addon-build/"/>
+    <jspluginonline name="汇报" url="http://127.0.0.1:6303/" type="wpp"/>
+    <jspluginonline name="论文" url="http://127.0.0.1:6304/" type="wps"/>
 </jsplugins>

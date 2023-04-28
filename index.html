@@ -9,27 +9,18 @@
 </head>
 
 <body>
-    <h1>如果你看到这句话，说明网络没问题</h1>
-    <!-- <a download="jsplugins.xml"></a>
-    <textarea cols="110" rows="5"></textarea>
-    <h4>
+    <h1>v23.4.28</h1>
+    <h2>
         刷新网页下载文件<br>
-        如果无法下载文件，可以
-        <input type="button" value="复制" onclick="navigator.clipboard.writeText(content).then(e=>alert('复制成功'))">
-        以上文本， 粘贴至新建 txt文件中保存， 文件名改成 jsplugins.xml
-    </h4>
+        如果无法下载文件，可以单击
+        <a href="./wpsAcademic.zip">这里下载</a>
+    </h2>
     <script>
-        function $(Selectors, isAll) {
-            return isAll ? document.querySelectorAll(Selectors) : document.querySelector(Selectors);
-        }
-        let content = `<jsplugins>
-    <jspluginonline name="汇报" type="wpp" url="https://cubxx.github.io/wps-addon/汇报/wps-addon-build/"/>
-    <jspluginonline name="论文" type="wps" url="https://cubxx.github.io/wps-addon/论文/wps-addon-build/"/>
-</jsplugins>`;
-        $('textarea').value = content;
-        $('a').href = URL.createObjectURL(new Blob([content]));
-        confirm(`是否下载安装文件`) && $('a').click();
-    </script> -->
+        function $(Selectors, isAll) { return isAll ? document.querySelectorAll(Selectors) : document.querySelector(Selectors); }
+        let v = $('h1').innerText;
+        $('a').download = `wpsAcademic_${v}.zip`;
+        confirm(`是否下载${v}`) && $('a').click();
+    </script>
 </body>
 
 </html>

@@ -1,1 +1,0 @@
-var projInfo = {"name":"论文","type":"wps"}
