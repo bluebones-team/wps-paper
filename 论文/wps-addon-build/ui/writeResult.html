@@ -58,7 +58,7 @@
         }
 
         textarea {
-            display: none;
+            /* display: none; */
         }
 
         /* 容器样式 */
@@ -312,11 +312,11 @@
             },
             readTextareaData: function () {
                 let textarea = this.editor.$('textarea');
-                let text = textarea.value.replace(/ +/g, ''),
-                    arr = text.replace(/\n$/, '').split('\n').map(e => e.split('\t'));
+                let text = textarea.value.replace(/ +/g, '').replace(/\n$/, ''),
+                    arr = text.split('\n').map(e => e.split('\t'));
                 textarea.value = '';
                 if (arr[1]) {
-                    let list = this.datas().map(e => e.$('input', true));
+                    let list = this.datas().map(e => e.$('input[placeholder]', 1));
                     arr.forEach((e, r) => {
                         e.forEach((ee, c) => { if (list[r] && list[r][c]) list[r][c].value = ee; });
                     });
@@ -330,17 +330,17 @@
                     if ($('html').style.filter) return ['#0ff7', '#f0f7'][isOK]; // dark 模式
                     else return ['#f005', '#0f05'][isOK];;
                 };
-                this.datas().forEach(e => e.$('input', true).forEach(ee => {
-                    if (ee.type != 'button') ee.style.backgroundColor = colors(true);
-                    if (['', NaN, undefined].includes(ee.value)) errInput.push(ee);
-                }));
+                [... this.$('input[placeholder]', 1)].forEach(e => {
+                    e.style.backgroundColor = colors(true);
+                    if (['', NaN, undefined].includes(e.value)) errInput.push(e);
+                });
                 if (errInput[0]) errInput.forEach(e => e.style.backgroundColor = colors(false));
                 else this.confirm(), this.output();
             },
             edit: function () {
-                this.datas().forEach(e => e.$('input', true).forEach(ee => {
-                    ee.style.backgroundColor = '';
-                }));
+                [... this.$('input[placeholder]', 1)].forEach(e => {
+                    e.style.backgroundColor = '';
+                });
             },
             output: function () {
                 console.log(this.result);
@@ -424,6 +424,7 @@
                                 <input class="indep_level" type="text" placeholder="水平1">
                                 <input class="indep_level" type="text" placeholder="水平2">
                             </div></div>`,
+                datas: function () { return [...$('#indep').$('div', 1)] },
                 confirm: function () {
                     // 清空变量
                     window['is'] = []; window['ds'] = []; window['ias'] = [];
@@ -485,7 +486,6 @@
                 innerHTML: `<table id="MSDtable_body"></table>`,
                 datas: function () { return [...$('#MSDtable_body').$('tbody').children] },
                 confirm: function () {
-                    this.readTextareaData();
                     // 写入数据
                     let dataArr = this.datas().map(e => {
                         let row = [...e.$('.MSD', true)].map(ee => {
@@ -549,7 +549,6 @@
                 innerHTML: `<div id="Ttest_body"></div>`,
                 datas: function () { return [...$('#Ttest_body').children] },
                 confirm: function () {
-                    this.readTextareaData();
                     this.datas().forEach(e => {
                         this.result = OP().Ttest(window[writeData(e)]);
                     });
@@ -579,7 +578,6 @@
                 innerHTML: `<div id="Ftest_body"></div>`,
                 datas: function () { return [...$('#Ftest_body').children] },
                 confirm: function () {
-                    this.readTextareaData();
                     // 删除dom
                     [...$('body').children].forEach(e => {
                         /^(post|simple)$/.test(e.className) && e.remove();
@@ -680,7 +678,7 @@
                 id: 'LinearModel',
                 className: 'box',
                 innerHTML: `<label for="model">回归模型</label>
-                    <input id="model_R2" type="number" step="0.01" placeholder="R2解释方差">
+                    <input id="model_R2" type="number" step="0.01" placeholder="R方">
                     <input id="model_F" type="number" placeholder="F值">
                     <input id="model_df1" type="number" placeholder="自由度1">
                     <input id="model_df2" type="number" placeholder="自由度2">
@@ -692,7 +690,9 @@
                     });
                     this.result = OP().LinearModel(window['model']);
                 },
-            })).init();
+            })).init(function () {
+                this.$('textarea').style.display = 'none'
+            });
         }
         function addLinear() {
             function Ldata(id) {
@@ -700,7 +700,7 @@
                     <label for="${id}">${window[id].name}</label>
                     <input id="${id}_beta" type="number" step="0.01" placeholder="β回归系数">
                     <input id="${id}_t" type="number" placeholder="t值">
-                    <input id="${id}_df" type="number" placeholder="自由度">
+                  <!-- <input id="${id}_df" type="number" placeholder="自由度"> -->
                     <input id="${id}_p" type="number" step="0.01" placeholder="p值">
                 </div>`
             }
@@ -714,6 +714,7 @@
                     this.result = [];
                     this.datas().map(e => {
                         let id = writeData(e);
+                        window[id].df = window['model'].df2;
                         this.result.push(OP().Linear(window[id]));
                     });
                     this.result = this.result.join('；');

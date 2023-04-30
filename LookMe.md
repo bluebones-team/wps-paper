@@ -2,7 +2,7 @@
 1. 保证加载项文件夹、*jsplugins.xml*、*deploying.bat*、*addonServer.exe*在同一文件夹下
 2. 双击启动*addonServer.exe*，当前文件夹会出现*record.txt*文件
 3. 打开*record.txt*，查看是否有报错，并依照提示操作，然后关闭*record.txt*，**再次启动***addonServer.exe*，直到成功部署
-4. 双击运行*deploying.bat*，可能会有弹窗，按F
+4. 双击运行*deploying.bat*，依照弹窗操作
 5. 打开WPS，随便开个文档，查看自定义功能区内是否有相应加载项
 6. 一次部署成功，以后就不需要再启动*addonServer.exe*了，因为*addonServer.exe*已经加入了[开机自启动](#deployingbat)
 

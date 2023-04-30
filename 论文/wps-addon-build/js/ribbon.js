@@ -28,19 +28,21 @@ function fontInit(Font, config = {}) {
 }
 function BookmarkToField(source, refer, name) {
     //添加 书签-域 链接
-    source.Bookmarks.Add(name);
-    refer.Fields.Add(refer).Code.Text = ` REF ${name} `;
+    doc.Bookmarks.Add(name, source);
+    doc.Fields.Add(refer).Code.Text = ` REF ${name} \\h `;
 }
-function loop(Items, func) {
+Object.prototype.loop = function (func) {
     // Items.Count 可能会动态变化
-    for (let i = 1; i <= Items.Count; i++) func(Items.Item(i), i, Items);
-}
+    for (let i = 1; i <= this.Count; i++) func(this.Item(i), i, this);
+};
 Function.prototype.step = function (note) {
     // 创建撤销组
+    if (note instanceof Object) note = `JSA-${this.name}`;
     wps.UndoRecord.StartCustomRecord(note);
     this();
     wps.UndoRecord.EndCustomRecord();
-}
+    return !0
+};
 var referIndex = { values: [], ranges: [], init: function () { this.values = [], this.ranges = [] } }, //参考文献
     sel = wps.Selection,
     doc = wps.ActiveDocument,
@@ -321,14 +323,20 @@ function CheckContext() {
     return !0;
 }
 
-// 挑选统计方法
-function pickMethod(c) {
-    return !0
-}
-
 // 撰写结果
 function writeResult() {
-    shellExecuteByOAAssist(`${GetUrlPath()}/ui/writeResult.html`);
+    confirm('是否打开新版\n取消则打开旧版')
+        ? shellExecuteByOAAssist(`https://cubxx.github.io/wps-addon/%E8%AE%BA%E6%96%87/wps-addon-build/ui/writeResult.html`)
+        : shellExecuteByOAAssist(`${GetUrlPath()}/ui/writeResult.html`);
+    return !0;
+}
+
+// 引用
+function textLink(control) {
+    if (sel.Text) BookmarkToField(sel.Range, sel.Next(), `_Link_${+new Date()}`);
+    else alert('请选择文本');
+    doc.Fields.Update();
+    sel.Next().Select()
     return !0;
 }
 
@@ -351,6 +359,7 @@ function addFigure() {
     ps.Item(3).Range.Text = `图${doc.Tables.Count + 1}\t${'标题'}`;
     ps.Item(3).Range.Fields.Add(ps.Item(3).Range.Words.Item(2)).Code.Text = ' SEQ 图 \\* ARABIC '; // 添加域
     ps.Item(3).Alignment = wps.Enum.wdAlignParagraphCenter;
+    sel.ParagraphFormat.CharacterUnitFirstLineIndent = 0;
     doc.Fields.Update(); // 更新文档所有域
     return !0;
 }
@@ -366,11 +375,14 @@ function addTable() {
     ps.Item(1).Range.Font.Name = '黑体';
     ps.Item(1).Range.Fields.Add(ps.Item(1).Range.Words.Item(2)).Code.Text = ' SEQ 表 \\* ARABIC '; // 添加域
     ps.Item(1).Alignment = wps.Enum.wdAlignParagraphCenter;
-    doc.Fields.Update(); // 更新文档所有域
     //表注
-    ps.Item(3).Range.Text = '注：*表示p < 0.05';
-    ps.Item(3).Range.Words.Item(5).Font.Italic = true; // p斜体
+    ps.Item(3).Range.Text = '注：N = 数字, *p < 0.05, **p < 0.01。';
+    ps.Item(3).Range.Words.loop(e => {
+        if (/^ ?[Np] ?$/.test(e.Text)) e.Font.Italic = true;
+    })// 斜体
     ps.Item(3).Range.Paragraphs.Alignment = wps.Enum.wdAlignParagraphLeft;
+    sel.ParagraphFormat.CharacterUnitFirstLineIndent = 0;
+    doc.Fields.Update(); // 更新文档所有域
     //创建表格
     let tableCount = doc.Tables.Count;
     ps.Item(2).Range.Select();
@@ -381,7 +393,7 @@ function addTable() {
         sel.Text = '作表失败 请先复制Excel表格';
     } else table = sel.Tables.Item(1);
     //设置表格格式
-    loop(table.Rows, e => e.Height = 13.8); // 行高 13.8
+    table.Rows.loop(e => e.Height = 13.8); // 行高 13.8
     table.AutoFitBehavior(2); // 根据活动窗口的宽度自动调整表格大小
     table.Borders.InsideLineStyle = 0;
     table.Borders.OutsideLineStyle = 0;
