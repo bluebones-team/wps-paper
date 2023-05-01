@@ -13,14 +13,14 @@
                     <button id="link" label="引用" onAction="textLink.step" enabled="true" imageMso="Text" size="small"/>
                 </group>
                 <group id="Chart_grp" label="图表">
-                    <button id="figure" label="作图" onAction="addFigure.step" enabled="true" imageMso="ChartInsert" size="small"/>
+                    <button id="figure" label="作图" onAction="addFigure.step" enabled="false" imageMso="ChartInsert" size="small"/>
                     <button id="table" label="作表" onAction="addTable.step" enabled="true" imageMso="TableDesign" size="small"/>
                     <button id="flowChart" label="流程图" onAction="addFlowChart.step" enabled="false" imageMso="TracePrecedents" size="large"/>
                 </group>
                 <group  id="Other_grp" label="其他">
-                    <button id="frame" label="创建框架" onAction="createFrame.step" enabled="true" imageMso="Zoom100" size="large"/>
+                    <button id="frame" label="创建框架" onAction="createFrame.step" enabled="false" imageMso="Zoom100" size="large"/>
                     <button id="identify" label="识别大纲" onAction="identifyOutline.step" enabled="true" imageMso="XmlStructure" size="small"/>
-                    <button id="test" label="测试" onAction="test" enabled="true" imageMso="Text" size="small"/>
+                    <button id="test" label="测试" onAction="test" enabled="false" imageMso="Text" size="small"/>
                     <!-- <button id="btnIsEnbable" label="全文" enabled="false" imageMso="Text" size="small"/> -->
                     <button id="TaskPane" label="帮助" onAction="ShowHelp" enabled="true" imageMso="Help" size="large"/>
                 </group>

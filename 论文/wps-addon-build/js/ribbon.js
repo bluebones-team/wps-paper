@@ -36,10 +36,14 @@ Object.prototype.loop = function (func) {
     for (let i = 1; i <= this.Count; i++) func(this.Item(i), i, this);
 };
 Function.prototype.step = function (note) {
+    let control;
+    if (note instanceof Object) {
+        control = note;
+        note = `JSA-${this.name}`;
+    }
     // 创建撤销组
-    if (note instanceof Object) note = `JSA-${this.name}`;
     wps.UndoRecord.StartCustomRecord(note);
-    this();
+    this(control);
     wps.UndoRecord.EndCustomRecord();
     return !0
 };
