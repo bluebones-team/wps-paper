@@ -7,8 +7,14 @@
     <script>
         var apa = 'https://apastyle.apa.org/style-grammar-guidelines/references/elements-list-entry',
             aps = 'https://journal.psych.ac.cn/xlxb/fileup/0439-755X/ITEM/20220223114333.pdf';
-        var help = 'https://github.com/Cubxx/wps-addon/blob/main/论文/Regexp.md',
-            mailto = `mailto:1000502425@smail.shnu.edu.cn?subject=%5BWPS-addon-paper%5DAdvice&body=`;
+        var help = {
+            'deploy': 'https://github.com/Cubxx/wps-addon/blob/main/论文/help.md',
+            'online': 'https://cubxx.github.io/wps-addon/论文/help.md'
+        }, mailto = `mailto:1000502425@smail.shnu.edu.cn?subject=%5BWPS-addon-paper%5DAdvice&body=`;
+        var libs = {
+            'marked': "https://unpkg.com/marked/lib/marked.umd.js",
+            'strapdown': "https://cdn.jsdelivr.net/gh/Naereen/StrapDown.js/strapdown.min.js"
+        };
     </script>
     <style>
         :root {
@@ -149,14 +155,14 @@
     <form action>
         <textarea type="text" placeholder="在此输入你的建议..."></textarea>
         <input type="submit" value="提交"
-            onclick="shellExecuteByOAAssist(`${mailto+this.previousElementSibling.value.replace(/\n/g,'%0D%0A')}%0D%0A%0D%0A===<以下为调试信息>===%0D%0A${info.innerHTML}`)">
+            onclick="shellExecuteByOAAssist(`${mailto+this.previousElementSibling.value.replace(/\n/g,'%0D%0A')}`)">
     </form>
     <span name="刷新" style="height: 20px;cursor: pointer;" onclick="location.reload()"></span>
-    <cite>--- 2023.4.15 新增两个功能 更新帮助文档 </cite>
+    <cite>--- 2023.4.15</cite>
     <ul id="refer">
         <li onclick="shellExecuteByOAAssist(apa)">APA格式官网</li>
         <li onclick="shellExecuteByOAAssist(aps)">《心理学报》索引格式</li>
-        <li onclick="shellExecuteByOAAssist(help)">帮助文档网址</li>
+        <li onclick="shellExecuteByOAAssist(help.deploy)">帮助文档网址</li>
     </ul>
     <xmp id="content" theme="yeti" style></xmp>
     <!-- 调试信息 -->
@@ -199,11 +205,10 @@
             });
         }
         //请求文件
-        let file = 'https://cubxx.github.io/wps-addon/论文/Regexp.md';
+        let file =help.online;
         Promise.all([
-            addScript("https://unpkg.com/marked/lib/marked.umd.js"),
-            addScript("https://cdn.jsdelivr.net/gh/Naereen/StrapDown.js/strapdown.min.js")
-            // http://yieme.github.io/strapdown/dist/strapdown.js
+            addScript(libs.marked),
+            addScript(libs.strapdown)
         ]).then(() => {
             info.add('正在连接Github...');
             fetch(file).then(res => {

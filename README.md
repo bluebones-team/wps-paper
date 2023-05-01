@@ -1,7 +1,9 @@
 # 介绍
 这是一些使用JavaScript开发的WPS加载项，主要用于**搓论文**  
 每个文件夹表示一个加载项  
-详细内容见各文件夹中的`README.md`
+详细内容见各文件夹中的`README.md`  
+视频教程 [bilibili](https://www.bilibili.com/list/525570753?sid=3253331)  
+意见邮箱 [1000502425@smail.shnu.edu.cn](mailto:1000502425@smail.shnu.edu.cn)
 
 # 本地安装
 1. 按住Ctrl点击[**下载链接**](https://cubxx.github.io/wps-addon/index.html)
@@ -17,7 +19,7 @@
 2. 写入以下内容
 ```xml
     <jsplugins>
-        <jspluginonline name="汇报" url="https://cubxx.github.io/wps-addon/汇报/wps-addon-build/" type="wpp"/>
+        <!-- <jspluginonline name="汇报" url="https://cubxx.github.io/wps-addon/汇报/wps-addon-build/" type="wpp"/> -->
         <jspluginonline name="论文" url="https://cubxx.github.io/wps-addon/论文/wps-addon-build/" type="wps"/>
     </jsplugins>
 ```

@@ -57,10 +57,6 @@
             font-size: large;
         }
 
-        textarea {
-            /* display: none; */
-        }
-
         /* 容器样式 */
         .box {
             display: flex;
@@ -714,7 +710,7 @@
                     this.result = [];
                     this.datas().map(e => {
                         let id = writeData(e);
-                        window[id].df = window['model'].df2;
+                        window[id].df = window['model'].df2 || prompt('请输入t值自由度');
                         this.result.push(OP().Linear(window[id]));
                     });
                     this.result = this.result.join('；');
@@ -762,16 +758,18 @@
                             + txt(`当其他自变量不变时，${$('#Linear').result}。`, 'p');
                     })
                     // 格式化
-                    text = text.replace(/\u03B7(2)/g, `\u03B7${txt('$1', 'sup')}`)
-                        .replace(/\s(F|p|\u03B7|t|d|SD)/g, ` ${txt('$1', 'i')}`)
+                    text = text.replace(/[χη](2)/g, `η${txt('$1', 'sup')}`)
+                        .replace(/\s(F|p|t|d|M|SD|r|N|n)/g, ` ${txt('$1', 'i')}`)
                         .replace(/%(CI)\[/g, `%${txt('$1', 'i')}[`)
-                        .replace(/\((M)/g, `(${txt('$1', 'i')}`)
+                        .replace(/\((M) /g, `(${txt('$1', 'i')} `)
                         .replace(/(t|F)检验/g, `${txt('$1', 'i')}检验`)
-                        .replace(/\$dep/g, `${d1.name}`);
+                        .replace(/ -(\d)/g, ` —$1`)
+                        .replace(/\$dep/g, d1.name);
                     $('#output_content').innerHTML = text;
                 }
             })).init(function () {
                 $('#output_content').focus();
+                this.$('textarea').style.display = 'none';
                 if ($('html').style.filter) $('#output_content').style.filter = 'invert(1)';
             });
         }

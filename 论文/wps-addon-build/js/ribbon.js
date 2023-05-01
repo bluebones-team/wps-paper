@@ -11,10 +11,6 @@ function Paper_onload(ribbonUI) {
 }
 
 // var dependent_variables = [], independent_variables = [];
-function RangStr(range) {
-    if (Array.isArray(range)) { let str = ''; return (range.forEach(e => { str += e.Text }), str) }
-    else return range.Text;
-}
 function fontInit(Font, config = {}) {
     Object.assign(Font, {
         Size: 9,
@@ -31,10 +27,16 @@ function BookmarkToField(source, refer, name) {
     doc.Bookmarks.Add(name, source);
     doc.Fields.Add(refer).Code.Text = ` REF ${name} \\h `;
 }
-Object.prototype.loop = function (func) {
-    // Items.Count 可能会动态变化
-    for (let i = 1; i <= this.Count; i++) func(this.Item(i), i, this);
-};
+Object.assign(Object.prototype, {
+    RangStr: function (range) {
+        if (Array.isArray(range)) { let str = ''; return (range.forEach(e => { str += e.Text }), str) }
+        else return range.Text;
+    },
+    loop: function (func) {
+        // Items.Count 可能会动态变化
+        for (let i = 1; i <= this.Count; i++) func(this.Item(i), i, this);
+    },
+});
 Function.prototype.step = function (note) {
     let control;
     if (note instanceof Object) {
@@ -216,7 +218,7 @@ function CheckIndexFormat(control) {
             link = /(^(https?|doi)\:\/\/[a-zA-Z\#\?\.\/]*\.\s*)?$/,
             reg = new RegExp(RegStr(au, da, ti, so)),
             net_head = ['doi', 'http'];
-        var pars = sel.Paragraphs,
+        var pars = wps.Selection.Paragraphs,
             p_space = [],
             chr_swap = ["（）【】，−－–：’？！ ．", "()[],---:'?! ."], chr_spac = ',.&:?…!',
             ge_ti = /[^\(\)]*. /,
@@ -380,7 +382,7 @@ function addTable() {
     ps.Item(1).Range.Fields.Add(ps.Item(1).Range.Words.Item(2)).Code.Text = ' SEQ 表 \\* ARABIC '; // 添加域
     ps.Item(1).Alignment = wps.Enum.wdAlignParagraphCenter;
     //表注
-    ps.Item(3).Range.Text = '注：N = 数字, *p < 0.05, **p < 0.01。';
+    ps.Item(3).Range.Text = '注：N = 数字, *p < 0.05, **p < 0.01, ***p < 0.001。';
     ps.Item(3).Range.Words.loop(e => {
         if (/^ ?[Np] ?$/.test(e.Text)) e.Font.Italic = true;
     })// 斜体
@@ -508,7 +510,8 @@ function createFrame() {
 
 // 识别大纲
 function identifyOutline() {
-    for (let pn = 1; pn <= sel.Paragraphs.Count; pn++) {
+    const pCount = sel.Paragraphs.Count;
+    for (let pn = 1; pn <= pCount; pn++) {
         let p = sel.Paragraphs.Item(pn);
         //识别标题
         if (p.Alignment == wps.Enum.wdAlignParagraphCenter) {
