@@ -52,6 +52,7 @@
 
         label {
             display: inline-block;
+            min-width: fit-content;
             width: 100px;
             text-align: center;
             font-size: large;
@@ -226,10 +227,13 @@
     <div id="plus-tools">
         <input type="button" value="夜间模式"
             onclick="window.$('html,#output_content',1).forEach(e=>e.style.or('filter', 'invert(1)', ''));"></input>
-        <input type="button" value="输出结果" onclick="let elm=window.$('#output');elm?elm.update():addOutput()"></input>
-        <select id="mode" autofocus>
+        <input type="button" value="输出结果"
+            onclick="let elm=window.$('#output');elm?elm.update():addBox('output');"></input>
+        <select id="mode" autofocus
+            onchange="window.$('script ~ div[id]', 1).forEach(e => e.remove()); addBox('base');">
             <option>差异检验</option>
             <option>线性回归</option>
+            <option>中介模型</option>
         </select>
         <ul id="debugInfo" ondblclick="this.innerHTML=''"></ul>
     </div>
@@ -299,14 +303,19 @@
             info: function () { },
         });
         Object.assign(HTMLDivElement.prototype, {
-            init: function (func) {
-                this.editor = this.addEditor(this.check, this.edit);
+            init() {
+                this.editor = this.addEditor(this.onCheck, this.onEdit);
                 this.datas = this.datas || function () { return [this] };
                 this.update && this.update();
-                func && func.call(this);
+                this.initFunc && this.initFunc();
                 return this;
             },
-            readTextareaData: function () {
+            dataElm(id, exp, elm, tag = 'div') {
+                let arr = exp.split(',').map(e => e.split('|'));
+                let inputs = arr.map(e => `<input id="${id}_${e[0]}" type="${e[2] || 'number'}" placeholder="${e[1] || e[0]}" ${e[3] || ''}>`).join('\n');
+                return `<${tag} id="${id}_data" >${elm || ''}${inputs}</${tag}>`;
+            },
+            readTextareaData() {
                 let textarea = this.editor.$('textarea');
                 let text = textarea.value.replace(/ +/g, '').replace(/\n$/, ''),
                     arr = text.split('\n').map(e => e.split('\t'));
@@ -318,7 +327,30 @@
                     });
                 }
             },
-            check: function () {
+            writeData(dataElm, prop) {
+                let id = dataElm.id.split('_')[0];
+                window[id] = window[id] || {};
+                let obj = window[id];
+                function data(elm) { // 根据单个元素 返回数据对象
+                    let obj = {};
+                    elm.$('input[id]', 1).forEach(e => {
+                        obj[e.id.match(/_([^_]+)$/)[1]] = e.type == 'number' ? +e.value : e.value;
+                    });
+                    return obj;
+                }
+                if (prop) { // 多个元素 写入数组
+                    !function selet(arr) {
+                        let p = arr.shift();
+                        if (arr[0]) { obj = obj[p] = {}; selet(arr); }
+                        else { obj = obj[p] = []; }
+                    }(prop.split('.'));
+                    Object.assign(obj, [...dataElm.children].map(data));
+                } else { // 单个元素 写入对象
+                    Object.assign(obj, data(dataElm));
+                }
+                return window[id];
+            },
+            onCheck() {
                 this.readTextareaData();
                 let errInput = [];
                 let colors = function (isOK) {
@@ -331,16 +363,14 @@
                     if (['', NaN, undefined].includes(e.value)) errInput.push(e);
                 });
                 if (errInput[0]) errInput.forEach(e => e.style.backgroundColor = colors(false));
-                else this.confirm(), this.output();
+                else this.confirm(), console.log(this.output());
             },
-            edit: function () {
+            onEdit() {
                 [... this.$('input[placeholder]', 1)].forEach(e => {
                     e.style.backgroundColor = '';
                 });
             },
-            output: function () {
-                console.log(this.result);
-            },
+            output() { return this.id },
         });
         Object.assign(Node.prototype, {
             addTools: function (max, min) {
@@ -382,484 +412,431 @@
             },
         });
         window.onerror = function (...e) { $('#debugInfo').appendChild(addElm('li', { innerHTML: `${e[2]}&nbsp;&nbsp;&nbsp;${e[0]}` })); }
-        $('#mode').onchange = function () { $('script ~ *', 1).forEach(e => e.remove()); addBase(); };
-        addBase();
+        addBox('base');
 
-        // 通用
-        function addElm(tag, config) { return Object.assign(document.createElement(tag), config) }
+        function addElm(tag, ...config) { return Object.assign(document.createElement(tag), ...config); }
         function datalist(id, arr, func = e => e) {
             return `<datalist id="${id}">
                 ${arr.map((e, i) => `<option value="${func(e)}" index="${i}"></option>`).join('')}
                 </datalist>`;
         }
-        function writeData(e) {
-            // 数据写入对象
-            let id = e.id.match(/^(i\d(×i\d)*)_[A-Z]data$/)[1];
-            [...e.$('input', 1)].forEach(ee => {
-                if (!window[id]) {
-                    // 创建 交互变量
-                    window[id] = {
-                        name: `${id.split('×').map(e => window[e].name).join('×')}`,
-                        is: id.split('×').map(e => window[e])
-                    }
-                    window['ias'].push(window[id]);
-                };
-                window[id][ee.id.match(/^i\d(×i\d)*_(.*)$/)[2]] = +ee.value;
-            });
-            return id;
-        }
         function Mode(...funcs) { return funcs[$('#mode').selectedIndex](); }
-        // 差异检验
-        function addBase() {
-            return $('body').appendChild(addElm('div', {
-                id: 'base',
-                className: 'box',
-                innerHTML: `<div id="dep"><input id="dep1" type="text" placeholder="因变量1"></div>
-                            <div id="indep"><div id="indep1" title="自变量1">
-                                <input class="indep_name" type="text" placeholder="自变量">
-                                <input class="indep_level" type="text" placeholder="水平1">
-                                <input class="indep_level" type="text" placeholder="水平2">
-                            </div></div>`,
-                datas: function () { return [...$('#indep').$('div', 1)] },
-                confirm: function () {
-                    // 清空变量
-                    window['is'] = []; window['ds'] = []; window['ias'] = [];
-                    Object.keys(window).forEach(e => { /^[id]\d(×i\d)*$/.test(e) && delete window[e] });
-                    // 赋值变量
-                    for (let i = 1; i <= $('#dep').childElementCount - 1; i++) {
-                        let obj = { id: `d${i}`, elm: $(`#dep${i}`) };
-                        window['ds'].push(window[obj.id] = Object.assign(obj, {
-                            name: obj.elm.value
-                        }));
-                    }
-                    for (let i = 1; i <= $('#indep').childElementCount - 1; i++) {
-                        let obj = { id: `i${i}`, elm: $(`#indep${i}`) };
-                        window['is'].push(window[obj.id] = Object.assign(obj, {
-                            name: obj.elm.children[1].value,
-                            ls: [...obj.elm.children].slice(2).map(e => e.value),
-                        }));
-                    }
-                    // 输出
-                    this.result = OP().base(window['is'], window['ds']);
-                    // 更新 datalist
-                    $('#datalists').innerHTML = '';
-                    is.forEach(e => $('#datalists').innerHTML += datalist(`${e.id}_ls`, e.ls));
-                    // 更新dom
-                    $('#base ~ *', 1).forEach(e => {
-                        if (e.tagName == 'DIV') e.remove(); // 移除 #base以下的div元素
-                    });
-                    Mode(e => {
-                        addMSDtable();
-                        if (is.length + i1.ls.length == 3) addTtest();
-                        else addFtest();
-                    }, e => {
-                        window['model'] = {};
-                        addLinearModel();
-                        addLinear();
-                    });
-
-                },
-            })).init(function () {
-                $('#dep').addTools(2);
-                Mode(e => {
-                    $('#indep').addTools(3);
-                    $('#indep1').addTools(6, 4);
-                }, e => {
-                    $('#indep').addTools(10);
-                    $('#indep1').addTools();
-                });
-            });
-        }
-        function addMSDtable() {
-            function MSDdata(id) {
-                return `<td id=${id} class="MSD">
-                    <input id=${id}_M type="number" step="0.01" placeholder="M">
-                    <input id=${id}_SD type="number" step="0.01" placeholder="SD"></td>`
-            }
-            return $('body').appendChild(addElm('div', {
-                id: `MSDtable`,
-                className: 'box',
-                innerHTML: `<table id="MSDtable_body"></table>`,
-                datas: function () { return [...$('#MSDtable_body').$('tbody').children] },
-                confirm: function () {
-                    // 写入数据
-                    let dataArr = this.datas().map(e => {
-                        let row = [...e.$('.MSD', true)].map(ee => {
-                            return {
-                                M: parseFloat(ee.children[0].value),
-                                SD: parseFloat(ee.children[1].value)
-                            }
-                        });
-                        return [...row, { M: row.mean('M'), SD: row.mean('SD') }]
-                    });
-                    let i2 = window['i2'] || { ls: [] };
-                    window['MSDtable'] = {
-                        rows: [...i2.ls, 'mean'],
-                        columns: [...i1.ls, 'mean'],
-                        data: [...dataArr, dataArr[0].map((e, i) => {
-                            return {
-                                M: dataArr.map(ee => ee[i]).mean('M'),
-                                SD: dataArr.map(ee => ee[i]).mean('SD')
-                            }
-                        })]
-                    };
-                },
-                update: function () {
-                    let trh, trb;
-                    if (window['i2']) {
-                        trh = `<tr>${[
-                            `<th>${i2.name}\\${i1.name}</th>`,
-                            ...i1.ls.map((e, i) => `<th id="i1l${i + 1}">${e}</th>`)
-                        ].join('')}</tr>`;
-                        trb = i2.ls.map((e, i) => `<tr><th id="i2l${i + 1}">${e}</th>\
-                    ${i1.ls.map((ee, j) => MSDdata('i2l' + (i + 1) + '&i1l' + (j + 1))).join('')}\
-                    </tr>`).join('');
+        function addBox(name, id) {
+            const op = {
+                MSD(...level) {
+                    let MSDtable = window['MSDtable'];
+                    if (MSDtable instanceof Element) return alert('请先填写MSDtable'), {};
+                    let In = e => e != -1 ? true : false;
+                    let w = MSDtable.rows.indexOf(level[0]),
+                        h = MSDtable.columns.indexOf(level[0]);
+                    if (In(w) == In(h)) {
+                        debugger;
+                    } else if (In(w)) {
+                        h = MSDtable.columns.indexOf(level[1] || 'mean');
+                        if (!In(h)) debugger;
                     } else {
-                        trh = `<tr>${[
-                            `<th>\\${i1.name}</th>`,
-                            ...i1.ls.map((e, i) => `<th id="i1l${i + 1}">${e}</th>`)
-                        ].join('')}</tr>`;
-                        trb = `<tr><th></th>\
-                    ${i1.ls.map((ee, j) => MSDdata('i1l' + (j + 1))).join('')}\
-                    </tr>`;
-                    };
-                    $('#MSDtable_body').innerHTML = `<thead>${trh}</thead><tbody>${trb}</tbody>`;
+                        w = MSDtable.rows.indexOf(level[1] || 'mean');
+                        if (!In(w)) debugger;
+                    }
+                    let { M, SD } = MSDtable.data[w][h];
+                    return {
+                        M: M, SD: SD,
+                        text: `(M = ${M.toFixed(2)}, SD = ${SD.toFixed(2)})`
+                    }
                 },
-            })).init();
-        }
-        function addTtest() {
-            function Tdata(id) {
-                return `<div id="${id}_Tdata">
-                    <label for="${id}">${window[id].name}</label>
-                    <input id="${id}_t" type="number" step="0.01" placeholder="t值">
-                    <input id="${id}_df" type="number" placeholder="自由度">
-                    <input id="${id}_p" type="number" step="0.01" placeholder="p值">
-                    <input id="${id}_Cohen_d" type="number" step="0.01" placeholder="Cohen d">
-                    <input id="${id}_CI_L" type="number" step="0.01" placeholder="CI下限">
-                    <input id="${id}_CI_U" type="number" step="0.01" placeholder="CI上限">
-                </div>`
-            }
-            return $('body').appendChild(addElm('div', {
-                id: 'Ttest',
-                className: 'box',
-                innerHTML: `<div id="Ttest_body"></div>`,
-                datas: function () { return [...$('#Ttest_body').children] },
-                confirm: function () {
-                    this.datas().forEach(e => {
-                        this.result = OP().Ttest(window[writeData(e)]);
-                    });
-                },
-                update: function () {
-                    $('#Ttest_body').innerHTML = Tdata('i1');
-                },
-            })).init();
-        }
-        function addFtest() {
-            function Fdata(id, name) {
-                name = name || window[id].name;
-                return `<div id="${id}_Fdata">
-                    <label for="${id}">${name}</label>
-                    <input id="${id}_F" type="number" step="0.01" placeholder="F值">
-                    <input id="${id}_df1" type="number" placeholder="自由度1">
-                    <input id="${id}_df2" type="number" placeholder="自由度2">
-                    <input id="${id}_p" type="number" step="0.01" placeholder="p值">
-                    <input id="${id}_eta2" type="number" step="0.01" placeholder="η2">
-                    <input id="${id}_CI_L" type="number" step="0.01" placeholder="CI下限">
-                    <input id="${id}_CI_U" type="number" step="0.01" placeholder="CI上限">
-                </div>`
-            }
-            return $('body').appendChild(addElm('div', {
-                id: 'Ftest',
-                className: 'box',
-                innerHTML: `<div id="Ftest_body"></div>`,
-                datas: function () { return [...$('#Ftest_body').children] },
-                confirm: function () {
-                    // 删除dom
-                    [...$('body').children].forEach(e => {
-                        /^(post|simple)$/.test(e.className) && e.remove();
-                    });
-                    this.result = [];
-                    this.datas().map(e => {
-                        let id = writeData(e);
-                        this.result.push(OP().Ftest(window[id]));
-                        // 添加dom
-                        if (window[id].p < 0.05) {
-                            if (id.includes('×')) addSimple(id);
-                            else if (window[id].ls.length > 2) addPost(id);
+                ifRes(type, arg1, arg2) {
+                    switch (type) {
+                        case 'p**': return arg1 == 0 ? 'p < 0.001' : 'p = ' + arg1.toFixed(3);
+                        case 'p*': return arg1 < 0.05 ? '显著' : '不显著';
+                        case 'M': return arg1.M > arg2.M ? '大于' : '小于';
+                        case 'ia': {
+                            let names = arg1.split('×');
+                            return names[1] ? `${arg1}交互作用` : arg1 + '主效应';
                         }
-                    });
-                    this.result = this.result.join('；');
+                        default: break;
+                    }
                 },
-                update: function () {
-                    let data = [];
-                    is.forEach((e, i) => {
-                        data.push(...is.choose(i + 1).map(es => Fdata(es.map(e => e.id).join('×'), es.map(e => e.name).join('×'))))
-                    });
-                    $('#Ftest_body').innerHTML = data.join('');
-                },
-            })).init();
-        }
-        function addSimple(id) {
-            function SimpleData(i, fixed_i, fixed_il, l1, l2) {
-                return `<div id="${id}_simple${i}">
-                    <input id="${id}_simple${i}_fixed_i" type="text" value="${fixed_i}" placeholder="固定自变量">
-                    <input id="${id}_simple${i}_fixed_il" type="text" value="${fixed_il}" placeholder="固定水平"><b> :</b>
-                    <input id="${id}_simple${i}_l1" type="text" value="${l1}" placeholder="水平1">
-                    <input id="${id}_simple${i}_l2" type="text" value="${l2}" placeholder="水平2">
-                    <input id="${id}_simple${i}_p" type="number" step="0.01" placeholder="p值">
-                    <input class="del" type="button" value="×" onclick="this.del()" >
-                    </div>`
-            }
-            return $('body').appendChild(addElm('div', {
-                id: `${id}_simple`,
-                className: 'simple box',
-                title: `${id} 简单效应分析`,
-                innerHTML: `<label for="${id}">${window[id].name}</label>
-                            <div id="${id}_simple_body"></div>`,
-                confirm: function () {
-                    window[id]['simple'] = [...$(`#${id}_simple_body`).children].map(e => {
-                        let data = {};
-                        [...e.$('input[id]', 1)].forEach(ee => { data[ee.id.match(/simple\d_(.*)$/)[1]] = ee.value });
-                        data['p'] = +data['p'];
-                        return data;
-                    });
-                    this.result = `${window[id].name}的简单效应分析发现，${window[id].simple.map(OP().simple).join('；')}。`;
-                },
-                update: function () {
-                    let args = [];
-                    window[id].is.forEach((e, i, arr) => {
-                        arr[i].ls.forEach(l => {
-                            arr[+!i].ls.choose(2).forEach(ll => {
-                                args.push([e.name, l, ...ll])
+                sign(p, l1, l2, msd1, msd2) {
+                    return p < 0.05 ?
+                        `${l1}的$dep${msd1.text}显著${op.ifRes('M', msd1, msd2)}${l2}${msd2.text}` :
+                        `${l1}的$dep${msd1.text}与${l2}${msd2.text}无显著差异`;
+                }
+            };
+            let boxInfo = {
+                base() {
+                    return {
+                        id: 'base',
+                        innerHTML: `<div id="dep"><input id="d1" type="text" placeholder="因变量1"></div>
+                            <div id="indep"><div id="i1">
+                                <input class="name" type="text" placeholder="自变量">
+                                <input class="level" type="text" placeholder="水平1">
+                                <input class="level" type="text" placeholder="水平2">
+                            </div></div>`,
+                        datas() { return [...$('#indep').$('div', 1)] },
+                        confirm() {
+                            // 更新变量
+                            window['vs'] = [];
+                            (function (...vs) {
+                                let e; vs.forEach(v => {
+                                    window[`${v.type}s`] = [];
+                                    for (let i = 1; i <= v.elm.childElementCount - 1; i++) {
+                                        Object.assign(e = $(`#${v.type}${i}`), v.get(e));
+                                        window[e.id] = e;
+                                        if (!window['vs'].includes(window[e.id])) {
+                                            window[`${v.type}s`].push(window[e.id]);
+                                            window['vs'].push(window[e.id]);
+                                        }
+                                    }
+                                });
+                            })({
+                                type: 'd', elm: $('#dep'), get({ value }) { return { name: value } },
+                            }, {
+                                type: 'i', elm: $('#indep'), get(e) {
+                                    return {
+                                        name: e.$('input.name').value,
+                                        ls: [...e.$('input.level', 1)].map(e => e.value),
+                                    }
+                                },
                             });
-                        });
-                    });
-                    $(`#${id}_simple_body`).innerHTML = args.map((arg, i) => SimpleData(i + 1, ...arg)).join('');
+                            // 更新 datalist
+                            $('#datalists').innerHTML = '';
+                            is.forEach(e => $('#datalists').innerHTML += datalist(`${e.id}_ls`, e.ls));
+                            // 更新dom
+                            $('#base ~ div[id]', 1).forEach(e => { e.remove(); });
+                            Mode(e => {
+                                addBox('MSDtable');
+                                if (is.length + i1.ls.length == 3) addBox('Ttest');
+                                else addBox('Ftest');
+                            }, e => {
+                                addBox('LinearModel');
+                                addBox('Linear');
+                            }, e => { addBox('Mediation') });
+
+                        },
+                        output() {
+                            return Mode(e => {
+                                let method = '';
+                                if (is.length == 1 && i1.ls.length == 2 && ds.length == 1) method = `t检验`;
+                                else {
+                                    method = `${'0单双'[is.length] || '多'}因素`;
+                                    if (ds.length > 1) method += '多元';
+                                    method += '方差分析';
+                                }
+                                let indepInfo = is.map(({ name, ls }) => `${ls.length}(${name}: ${ls.join(' / ')})`);
+                                return `对${ds.map(e => e.name).join('、')}采用${is.length > 1 ? indepInfo.join('×') : ''}${method}`
+                            }, e => {
+                                return `以${ds[0].name}为因变量，${is.map(e => e.name).join('、')}为自变量，进行标准${is.length > 1 ? '多元' : ''}线性回归`
+                            }, e => {
+                                return '';
+                            });
+                        },
+                        initFunc() {
+                            $('#dep').addTools(2);
+                            Mode(e => {
+                                $('#indep').addTools(3);
+                                $('#i1').addTools(6, 4);
+                            }, e => {
+                                $('#indep').addTools(10);
+                                $('#i1').addTools();
+                            }, e => {
+                                $('#indep').addTools(5);
+                                $('#i1').addTools();
+                            });
+                        }
+                    }
                 },
-            })).init();
-        }
-        function addPost(id) {
-            function PostData(e2, i) {
-                i += 1;
-                return `<div id="${id}_post${i}">
-                    <input id="${id}_post${i}_l1" type="text" value="${e2[0]}" placeholder="水平1">
-                    <input id="${id}_post${i}_l2" type="text" value="${e2[1]}" placeholder="水平2">
-                    <input id="${id}_post${i}_p" type="number" step="0.01" placeholder="p值">
-                    <input class="del" type="button" value="×" onclick="this.del()" >
-                    </div>`
-            }
-            return $('body').appendChild(addElm('div', {
-                id: `${id}_post`,
-                className: 'post box',
-                title: `${id} 事后检验`,
-                innerHTML: `<label for="${id}">${window[id].name}</label>
+                // 差异检验
+                MSDtable() {
+                    return {
+                        id: `MSDtable`,
+                        innerHTML: `<table id="MSDtable_body"></table>`,
+                        datas: function () { return [...$('#MSDtable_body').$('tbody').children] },
+                        confirm: function () {
+                            let dataArr = this.datas().map(e => {
+                                let row = [...e.$('.MSD', true)].map(ee => {
+                                    return {
+                                        M: parseFloat(ee.children[0].value),
+                                        SD: parseFloat(ee.children[1].value)
+                                    }
+                                });
+                                return [...row, { M: row.mean('M'), SD: row.mean('SD') }]
+                            });
+                            let i2 = window['i2'] || { ls: [] };
+                            window['MSDtable'] = {
+                                rows: [...i2.ls, 'mean'],
+                                columns: [...i1.ls, 'mean'],
+                                data: [...dataArr, dataArr[0].map((e, i) => {
+                                    return {
+                                        M: dataArr.map(ee => ee[i]).mean('M'),
+                                        SD: dataArr.map(ee => ee[i]).mean('SD')
+                                    }
+                                })]
+                            };
+                        },
+                        update: function () {
+                            let trh, trb;
+                            if (window['i2']) {
+                                trh = `<tr>${[
+                                    `<th>${i2.name}\\${i1.name}</th>`,
+                                    ...i1.ls.map((e, i) => `<th id="i1l${i + 1}">${e}</th>`)
+                                ].join('')}</tr>`;
+                                trb = i2.ls.map((e, i) => `<tr><th id="i2l${i + 1}">${e}</th>\
+                    ${i1.ls.map((ee, j) => this.dataElm(`i2l${i + 1}&i1l${j + 1}_MSD`, 'M,SD', '', 'th')).join('')}\
+                    </tr>`).join('');
+                            } else {
+                                trh = `<tr>${[
+                                    `<th>\\${i1.name}</th>`,
+                                    ...i1.ls.map((e, i) => `<th id="i1l${i + 1}">${e}</th>`)
+                                ].join('')}</tr>`;
+                                trb = `<tr><th></th>\
+                    ${i1.ls.map((ee, j) => this.dataElm(`i1l${j + 1}_MSD`, 'M,SD', '', 'th')).join('')}\
+                    </tr>`;
+                            };
+                            $('#MSDtable_body').innerHTML = `<thead>${trh}</thead><tbody>${trb}</tbody>`;
+                        },
+                    }
+                },
+                Ttest() {
+                    return {
+                        id: 'Ttest',
+                        innerHTML: `<div id="Ttest_body"></div>`,
+                        confirm() {
+                            this.writeData(this.$('#i1_Tdata'));
+                        },
+                        update() {
+                            $('#Ttest_body').innerHTML = this.dataElm('i1_Ttest', 't,df,p,CohenD|Cohen d,ciL|CI下限,ciU|CI上限', `<label>${window['i1'].name}</label>`);
+                        },
+                        output() {
+                            return (function ({ ls, t, df, p, CohenD, ciL, ciU }) {
+                                let [l1, l2] = ls;
+                                let msd1 = op.MSD(l1), msd2 = op.MSD(l2);
+                                return `${op.sign(p, l1, l2, msd1, msd2)}, t(${df}) = ${t.toFixed(2)}, ${op.ifRes('p**', p)}, Cohen d = ${CohenD.toFixed(2)}, 90%CI[${`${ciL.toFixed(2)}, ${ciU.toFixed(2)}`}]`
+                            })(i1);
+                        }
+                    }
+                },
+                Ftest() {
+                    return {
+                        id: 'Ftest',
+                        innerHTML: `<div id="Ftest_body"></div>`,
+                        datas() { return [...$('#Ftest_body').children] },
+                        confirm() {
+                            $('.post,.simple', 1).forEach(e => e.remove());
+                            this.is = [];
+                            this.datas().map(e => {
+                                let i = this.writeData(e);
+                                this.is.push(i);
+                                if (i.p < 0.05) {
+                                    if (i.id.includes('×')) addBox('simple', i.id);
+                                    else if (i.ls.length > 2) addBox('post', i.id);
+                                }
+                            });
+                        },
+                        update() {
+                            let data = [];
+                            is.forEach((e, i) => {
+                                data.push(...is.choose(i + 1).map(es => {
+                                    let id = es.map(e => e.id).join('×');
+                                    if (i > 0) window[id] = { id: id, name: es.map(e => e.name).join('×'), is: es, };
+                                    return this.dataElm(`${id}_Ftest`, 'F,df1,df2,p,eta2|η2,ciL|CI下限,ciU|CI上限', `<label>${window[id].name}</label>`);
+                                }));
+                            });
+                            $('#Ftest_body').innerHTML = data.join('');
+                        },
+                        output() {
+                            return this.is.map(function ({ name, F, df1, df2, p, eta2, ciL, ciU }) {
+                                return `${op.ifRes('ia', name)}${op.ifRes('p*', p)}, F(${df1}, ${df2}) = ${F.toFixed(2)}, ${op.ifRes('p**', p)}, η2 = ${eta2.toFixed(2)}, 90%CI[${`${ciL.toFixed(2)}, ${ciU.toFixed(2)}`}]`
+                            }).join('；');
+                        }
+                    }
+                },
+                post() {
+                    return {
+                        i: window[id],
+                        id: `${id}_post`,
+                        className: 'post box',
+                        title: `${id} 事后检验`,
+                        innerHTML: `<label for="${id}">${window[id].name}</label>
                             <div id="${id}_post_body"></div>`,
-                confirm: function () {
-                    window[id]['post'] = [...$(`#${id}_post_body`).children].map((e, i) => {
-                        let data = {};
-                        [...e.$('input[id]', 1)].forEach(ee => { data[ee.id.match(/post\d_(.*)$/)[1]] = ee.value });
-                        data['p'] = +data['p'];
-                        return data;
-                    });
-                    this.result = `对${window[id].name}进行事后检验发现，${window[id].post.map(OP().post).join('；')}。`;
+                        confirm() {
+                            this.writeData($(`#${id}_post_body`), 'post');
+                        },
+                        update() {
+                            $(`#${id}_post_body`).innerHTML = this.i.ls.choose(2).map((e, i) =>
+                                this.dataElm(`${id}_post${i}`, `l1|水平1|text|value="${e[0]}",l2|水平2|text|value="${e[1]}",p`,
+                                    '<input class="del" type="button" value="×" onclick="this.del()" >')).join('')
+                        },
+                        output() {
+                            return `对${this.i.name}进行事后检验发现，${this.i.post.map(function ({ l1, l2, p }) {
+                                let msd1 = op.MSD(l1), msd2 = op.MSD(l2);
+                                return `${op.sign(p, l1, l2, msd1, msd2)}, ${op.ifRes('p**', p)}`
+                            }).join('；')}。`;
+                        },
+                        initFunc() { this.$('textarea').style.display = 'none'; },
+                    }
                 },
-                update: function () {
-                    $(`#${id}_post_body`).innerHTML = window[id].ls.choose(2).map(PostData).join('')
+                simple() {
+                    return {
+                        i: window[id],
+                        id: `${id}_simple`,
+                        className: 'simple box',
+                        title: `${id} 简单效应分析`,
+                        innerHTML: `<label for="${id}">${window[id].name}</label>
+                            <div id="${id}_simple_body"></div>`,
+                        confirm() {
+                            this.writeData($(`#${id}_simple_body`), 'simple');
+                        },
+                        update() {
+                            let args = [];
+                            window[id].is.forEach((e, i, arr) => {
+                                arr[i].ls.forEach(l => {
+                                    arr[+!i].ls.choose(2).forEach(ll => {
+                                        args.push({ fixed_i: e.name, fixed_il: l, l1: ll[0], l2: ll[1] })
+                                    });
+                                });
+                            });
+                            $(`#${id}_simple_body`).innerHTML = args.map((e, i) =>
+                                this.dataElm(`${id}_simple${i + 1}`,
+                                    `fixed_i|自变量|text|value="${e.fixed_i}",fixed_il|固定水平|text|value="${e.fixed_il}",l1|水平1|text|value="${e.l1}",l2|水平2|text|value="${e.l2}",p`,
+                                    '<input class="del" type="button" value="×" onclick="this.del()">')).join('');
+                        },
+                        output() {
+                            return `${this.i.name}的简单效应分析发现，${this.i.simple.map(function ({ l1, l2, p, fixed_i, fixed_il }) {
+                                let msd1 = op.MSD(fixed_il, l1), msd2 = op.MSD(fixed_il, l2);
+                                return `${fixed_i}为${fixed_il}时，${op.sign(p, l1, l2, msd1, msd2)}, ${op.ifRes('p**', p)}`
+                            }).join('；')}。`
+                        },
+                        initFunc() { this.$('textarea').style.display = 'none'; },
+                    }
                 },
-            })).init();
-        }
-        // 线性回归
-        function addLinearModel() {
-            return $('body').appendChild(addElm('div', {
-                id: 'LinearModel',
-                className: 'box',
-                innerHTML: `<label for="model">回归模型</label>
+                // 线性回}归                '
+                LinearModel() {
+                    return {
+                        id: 'model',
+                        innerHTML: `<label for="model">回归模型</label>
                     <input id="model_R2" type="number" step="0.01" placeholder="R方">
                     <input id="model_F" type="number" placeholder="F值">
                     <input id="model_df1" type="number" placeholder="自由度1">
                     <input id="model_df2" type="number" placeholder="自由度2">
                     <input id="model_p" type="number" step="0.01" placeholder="p值">`,
-                confirm: function () {
-                    this.readTextareaData();
-                    [...this.$('input[id]', 1)].map(e => {
-                        window['model'][e.id.match(/model_(.*)$/)[1]] = +e.value;
-                    });
-                    this.result = OP().LinearModel(window['model']);
-                },
-            })).init(function () {
-                this.$('textarea').style.display = 'none'
-            });
-        }
-        function addLinear() {
-            function Ldata(id) {
-                return `<div id="${id}_Ldata">
-                    <label for="${id}">${window[id].name}</label>
-                    <input id="${id}_beta" type="number" step="0.01" placeholder="β回归系数">
-                    <input id="${id}_t" type="number" placeholder="t值">
-                  <!-- <input id="${id}_df" type="number" placeholder="自由度"> -->
-                    <input id="${id}_p" type="number" step="0.01" placeholder="p值">
-                </div>`
-            }
-            return $('body').appendChild(addElm('div', {
-                id: 'Linear',
-                className: 'box',
-                innerHTML: `<div id="Linear_body"></div>`,
-                datas: function () { return [...$('#Linear_body').children] },
-                confirm: function () {
-                    this.readTextareaData();
-                    this.result = [];
-                    this.datas().map(e => {
-                        let id = writeData(e);
-                        window[id].df = window['model'].df2 || prompt('请输入t值自由度');
-                        this.result.push(OP().Linear(window[id]));
-                    });
-                    this.result = this.result.join('；');
-                },
-                update: function () {
-                    $('#Linear_body').innerHTML = is.map(e => Ldata(e.id)).join('');
-                },
-            })).init();
-        }
-        // 输出模块
-        function addOutput() {
-            // 添加元素
-            return $('body').appendChild(addElm('div', {
-                id: 'output',
-                className: 'box',
-                innerHTML: `<div id="output_content" contenteditable></div>`,
-                confirm: function () {
-                    // 复制文本
-                    $('#output_content').contentEditable = false;
-                    let { innerText, innerHTML } = $('#output_content');
-                    navigator.clipboard.write([
-                        new ClipboardItem({
-                            'text/plain': new Blob([innerText], { type: 'text/plain' }),
-                            'text/html': new Blob([innerHTML], { type: 'text/html' }),
-                        })
-                    ]).then(e => alert('复制成功\n可以带格式粘贴'));
-                },
-                edit: function () {
-                    // 编辑文本
-                    $('#output_content').contentEditable = true;
-                    $('#output_content').focus();
-                },
-                update: function () {
-                    function txt(text, tag, style = "") {
-                        if (tag == 'p') style += `font-family: 'Times New Roman','宋体';font-size: 10.5pt;font-weight: normal;text-indent: 2em;margin: 0;line-height: 1.5;`;
-                        return `<${tag} style="${style}">${text}</${tag}>`
+                        confirm() {
+                            this.writeData(this);
+                        },
+                        output() {
+                            return (function ({ R2, F, df1, df2, p }) {
+                                return `整体模型调整后的解释方差为${(R2 * 1e2).toFixed(1)}%, F(${df1}, ${df2}) = ${F.toFixed(2)}, ${op.ifRes('p**', p)}`
+                            })(window['model']);
+                        },
+                        initFunc() { this.$('textarea').style.display = 'none'; },
                     }
-                    // 主要内容
-                    let text = Mode(e => {
-                        return txt(`${$('#base').result}。结果发现，${($('#Ttest') || $('#Ftest')).result}。`, 'p')
-                            + [...$('.post', 1)].map(e => txt(e.result, 'p')).join('')
-                            + [...$('.simple', 1)].map(e => txt(e.result, 'p')).join('');
-                    }, e => {
-                        return txt(`${$('#base').result}。各变量的相关矩阵见表1。回归分析结果显示，${$('#LinearModel').result}。`, 'p')
-                            + txt(`当其他自变量不变时，${$('#Linear').result}。`, 'p');
-                    })
-                    // 格式化
-                    text = text.replace(/[χη](2)/g, `η${txt('$1', 'sup')}`)
-                        .replace(/\s(F|p|t|d|M|SD|r|N|n)/g, ` ${txt('$1', 'i')}`)
-                        .replace(/%(CI)\[/g, `%${txt('$1', 'i')}[`)
-                        .replace(/\((M) /g, `(${txt('$1', 'i')} `)
-                        .replace(/(t|F)检验/g, `${txt('$1', 'i')}检验`)
-                        .replace(/ -(\d)/g, ` —$1`)
-                        .replace(/\$dep/g, d1.name);
-                    $('#output_content').innerHTML = text;
-                }
-            })).init(function () {
-                $('#output_content').focus();
-                this.$('textarea').style.display = 'none';
-                if ($('html').style.filter) $('#output_content').style.filter = 'invert(1)';
-            });
-        }
-        function OP() {
-            function MSD(...level) {
-                let MSDtable = window['MSDtable'];
-                if (MSDtable instanceof Element) return alert('请先填写MSDtable'), {};
-                let In = e => e != -1 ? true : false;
-                let w = MSDtable.rows.indexOf(level[0]),
-                    h = MSDtable.columns.indexOf(level[0]);
-                if (In(w) == In(h)) {
-                    debugger;
-                } else if (In(w)) {
-                    h = MSDtable.columns.indexOf(level[1] || 'mean');
-                    if (!In(h)) debugger;
-                } else {
-                    w = MSDtable.rows.indexOf(level[1] || 'mean');
-                    if (!In(w)) debugger;
-                }
-                let { M, SD } = MSDtable.data[w][h];
-                return {
-                    M: M, SD: SD,
-                    text: `(M = ${M.toFixed(2)}, SD = ${SD.toFixed(2)})`
-                }
-            }
-            function ifRes(type, arg1, arg2) {
-                //判断输出
-                switch (type) {
-                    case 'p**': return arg1 == 0 ? 'p < 0.001' : 'p = ' + arg1.toFixed(3);
-                    case 'p*': return arg1 < 0.05 ? '显著' : '不显著';
-                    case 'M': return arg1.M > arg2.M ? '大于' : '小于';
-                    case 'ia': {
-                        let names = arg1.split('×');
-                        return names[1] ? `${arg1}交互作用` : arg1 + '主效应';
+                },
+                Linear() {
+                    return {
+                        id: 'Linear',
+                        innerHTML: `<div id="Linear_body"></div>`,
+                        datas() { return [...$('#Linear_body').children] },
+                        confirm() {
+                            this.is = this.datas().map(this.writeData);
+                        },
+                        update() {
+                            $('#Linear_body').innerHTML = is.map(({ id }) => this.dataElm(`${id}_Linear`, 'beta|标准β,t,df,p', `<label for="${id}">${window[id].name}</label>`)).join('');
+                        },
+                        output() {
+                            return this.is.map(function ({ name, beta, t, df, p, ls }) {
+                                let orient = '';
+                                if (p < 0.05) {
+                                    orient = '高低';
+                                    if (ls.length == 2) orient = `，${ls[0]}的$dep${orient[+(beta > 0)]}于${ls[1]}`;
+                                    else orient = `，${name}越${orient[0]}，$dep越${orient[+!(beta > 0)]}`;
+                                }
+                                return `${name}的预测作用${op.ifRes('p*', p)}, β = ${beta.toFixed(2)}, t(${df}) = ${t}, ${op.ifRes('p**', p)}${orient}`
+                            }).join('；');
+                        },
                     }
-                    default: break;
-                }
-            }
-            function sign(p, l1, l2, msd1, msd2) {
-                return p < 0.05 ?
-                    `${l1}的$dep${msd1.text}显著${ifRes('M', msd1, msd2)}${l2}${msd2.text}` :
-                    `${l1}的$dep${msd1.text}与${l2}${msd2.text}无显著差异`;
-            }
-            return new (class {
-                constructor() { this.CL = '90%' }
-                base(is, ds) {
-                    return Mode(e => {
-                        let method = '';
-                        if (is.length == 1 && i1.ls.length == 2 && ds.length == 1) method = `t检验`;
-                        else {
-                            method = `${'0单双'[is.length] || '多'}因素`;
-                            if (ds.length > 1) method += '多元';
-                            method += '方差分析';
-                        }
-                        let indepInfo = is.map(({ name, ls }) => `${ls.length}(${name}: ${ls.join(' / ')})`);
-                        return `对${ds.map(e => e.name).join('、')}采用${is.length > 1 ? indepInfo.join('×') : ''}${method}`
-                    }, e => {
-                        return `以${ds[0].name}为因变量，${is.map(e => e.name).join('、')}为自变量，进行标准${is.length > 1 ? '多元' : ''}线性回归`
-                    });
-                }
-                Ttest({ ls, t, df, p, Cohen_d, CI_L, CI_U }) {
-                    let [l1, l2] = ls;
-                    let msd1 = MSD(l1), msd2 = MSD(l2);
-                    return `${sign(p, l1, l2, msd1, msd2)}, t(${df}) = ${t.toFixed(2)}, ${ifRes('p**', p)}, Cohen d = ${Cohen_d.toFixed(2)}, ${this.CL}CI[${`${CI_L.toFixed(2)}, ${CI_U.toFixed(2)}`}]`
-                }
-                Ftest({ name, F, df1, df2, p, eta2, CI_L, CI_U }) {
-                    return `${ifRes('ia', name)}${ifRes('p*', p)}, F(${df1}, ${df2}) = ${F.toFixed(2)}, ${ifRes('p**', p)}, η2 = ${eta2.toFixed(2)}, ${this.CL}CI[${`${CI_L.toFixed(2)}, ${CI_U.toFixed(2)}`}]`
-                }
-                post({ l1, l2, p }) {
-                    let msd1 = MSD(l1), msd2 = MSD(l2);
-                    return `${sign(p, l1, l2, msd1, msd2)}, ${ifRes('p**', p)}`
-                }
-                simple({ l1, l2, p, fixed_i, fixed_il }) {
-                    let msd1 = MSD(fixed_il, l1), msd2 = MSD(fixed_il, l2);
-                    return `${fixed_i}为${fixed_il}时，${sign(p, l1, l2, msd1, msd2)}, ${ifRes('p**', p)}`
-                }
-                LinearModel({ R2, F, df1, df2, p }) {
-                    return `整体模型调整后的解释方差为${(R2 * 1e2).toFixed(1)}%, F(${df1}, ${df2}) = ${F.toFixed(2)}, ${ifRes('p**', p)}`
-                }
-                Linear({ name, beta, t, df, p, ls }) {
-                    let orient = '';
-                    if (p < 0.05) {
-                        orient = '高低';
-                        if (ls.length == 2) orient = `，${ls[0]}的$dep${orient[+(beta > 0)]}于${ls[1]}`;
-                        else orient = `，${name}越${orient[0]}，$dep越${orient[+!(beta > 0)]}`;
+                },
+                // 中介模型
+                Mediation() {
+                    return {
+                        id: 'Media',
+                        innerHTML: '<div id="Media_body"></div>',
+                        datas() { return [...$('#Media_body').children] },
+                        confirm() { },
+                        update() {
+                            let paths = [];
+                            is.slice(1).forEach((e, i, arr) =>
+                                paths.push(arr.choose(i + 1).map(es => {
+                                    let names = [i1.name, ...es.map(e => e.name), d1.name].join('→');
+                                    return this.dataElm(`${names}`, 'effect|间接效应,ciL|CI下限,ciU|CI上限', `<label>${names}</label>`)
+                                }).join(''))
+                            );
+                            $('#Media_body').innerHTML = paths.join('');
+                        },
+                        output() { return ``;},
+                        initFunc() {
+                            let list = this.$('label', 1);
+                            list.forEach(e => {
+                                e.style.transition = 'none';
+                                e.style.width = getComputedStyle(list[list.length - 1]).width;
+                            });
+                        },
                     }
-                    return `${name}的预测作用${ifRes('p*', p)}, β = ${beta.toFixed(2)}, t(${df}) = ${t}, ${ifRes('p**', p)}${orient}`
+                },
+                // 调节模型
+                Moderation() { },
+                // 输出模块
+                output() {
+                    return {
+                        id: 'output',
+                        className: 'box',
+                        innerHTML: `<div id="output_content" contenteditable></div>`,
+                        confirm() { // 复制文本
+                            $('#output_content').contentEditable = false;
+                            let { innerText, innerHTML } = $('#output_content');
+                            navigator.clipboard.write([
+                                new ClipboardItem({
+                                    'text/plain': new Blob([innerText], { type: 'text/plain' }),
+                                    'text/html': new Blob([innerHTML], { type: 'text/html' }),
+                                })
+                            ]).then(e => alert('复制成功\n可以带格式粘贴'));
+                        },
+                        onEdit() {
+                            $('#output_content').contentEditable = true;
+                            $('#output_content').focus();
+                        },
+                        update() {
+                            function txt(text, tag, style = "") {
+                                if (tag == 'p') style += `font-family: 'Times New Roman','宋体';font-size: 10.5pt;font-weight: normal;text-indent: 2em;margin: 0;line-height: 1.5;`;
+                                return `<${tag} style="${style}">${text}</${tag}>`
+                            }
+                            // 主要内容
+                            let text = Mode(e => {
+                                return txt(`${$('#base').output()}。结果发现，${($('#Ttest') || $('#Ftest')).output()}。`, 'p')
+                                    + [...$('.post', 1)].map(e => txt(e.output(), 'p')).join('')
+                                    + [...$('.simple', 1)].map(e => txt(e.output(), 'p')).join('');
+                            }, e => {
+                                return txt(`${$('#base').output()}。各变量的相关矩阵见表1。回归分析结果显示，${$('#LinearModel').output()}。`, 'p')
+                                    + txt(`当其他自变量不变时，${$('#Linear').output()}。`, 'p');
+                            }, e => { return txt(``); })
+                            // 格式化
+                            $('#output_content').innerHTML = text.replace(/[χη](2)/g, `η${txt('$1', 'sup')}`)
+                                .replace(/\s(F|p|t|d|M|SD|r|N|n)/g, ` ${txt('$1', 'i')}`)
+                                .replace(/%(CI)\[/g, `%${txt('$1', 'i')}[`)
+                                .replace(/\((M) /g, `(${txt('$1', 'i')} `)
+                                .replace(/(t|F)检验/g, `${txt('$1', 'i')}检验`)
+                                .replace(/ -(\d)/g, ` —$1`)
+                                .replace(/\$dep/g, d1.name);
+                        },
+                        initFunc() {
+                            $('#output_content').focus();
+                            this.$('textarea').style.display = 'none';
+                            if ($('html').style.filter) $('#output_content').style.filter = 'invert(1)';
+                        },
+                    }
                 }
-            })();
+            }
+            return $('body').appendChild(addElm('div', { className: 'box' }, boxInfo[name]())).init();
         }
+
     </script>
 </body>
 

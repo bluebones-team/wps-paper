@@ -13,7 +13,7 @@
                     <button id="link" label="引用" onAction="textLink.step" enabled="true" imageMso="Text" size="small"/>
                 </group>
                 <group id="Chart_grp" label="图表">
-                    <button id="figure" label="作图" onAction="addFigure.step" enabled="false" imageMso="ChartInsert" size="small"/>
+                    <button id="figure" label="作图" onAction="addFigure.step" enabled="true" imageMso="ChartInsert" size="small"/>
                     <button id="table" label="作表" onAction="addTable.step" enabled="true" imageMso="TableDesign" size="small"/>
                     <button id="flowChart" label="流程图" onAction="addFlowChart.step" enabled="false" imageMso="TracePrecedents" size="large"/>
                 </group>
