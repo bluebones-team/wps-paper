@@ -145,6 +145,7 @@
             padding: 10px;
             outline: none;
             background-color: #fff;
+            user-select: none;
         }
 
         /* 附加工具 */
@@ -229,7 +230,9 @@
                 Object.defineProperties(p, o);
             } else Object.assign(p, o);
         };
+        const { toFixed } = Number.prototype;
         const { insertBefore, appendChild } = Node.prototype;
+        Number.prototype.toFixed = function (n) { return toFixed.call(+`${Math.round(`${this}e${n}`)}e-${n}`, n) };
         Expand(1, Object.prototype, {
             or(k, a, b) { let r = this[k] === a; this[k] = r ? b : a; return r },
             $(Selectors, isAll) {
@@ -518,7 +521,7 @@
                             }
                             let arr = [...$('script ~.box', 1)].map(e => e.output()).filter(e => e);
                             arr.unshift(arr.splice(0, 2).join(''));
-                            return arr.map(e => txt(e, 'p')).join('');
+                            this.$('.data').innerHTML = arr.map(e => txt(e, 'p')).join('');
                         },
                         initFunc() {
                             this.$('.data').contentEditable = true;
@@ -795,15 +798,15 @@
             {
                 id: 'LinearModel',
                 confirm() { this.writeData(this.$('#model_data')); },
-                output() {
-                    return (function ({ R2, F, df1, df2, p }) {
-                        return `回归分析结果显示，整体模型调整后的解释方差为${(R2 * 1e2).toFixed(1)}%, F(${df1}, ${df2}) = ${F.toFixed(2)}, ${op.ifRes('p***', p)}。`
-                    })(window['model']);
-                },
                 update() {
                     let html = this.dataElm('model', `R2|调整后R方,F,df1,df2,p`,
                         { elms: [{ elm: `<label>回归模型</label>` }] });
                     return html.replace(/df2\"/, `$& onchange="window.$('#Linear .data div[id] input:nth-child(4)',1).forEach(e=>e.value=this.value)"`);
+                },
+                output() {
+                    return (function ({ R2, F, df1, df2, p }) {
+                        return `回归分析结果显示，整体模型调整后的解释方差为${(R2 * 1e2).toFixed(1)}%, F(${df1}, ${df2}) = ${F.toFixed(2)}, ${op.ifRes('p***', p)}。`
+                    })(window['model']);
                 },
                 initFunc() { this.$('textarea').style.display = 'none'; },
             },
@@ -897,13 +900,11 @@
                     Mode.update();
                     this.Mode.addBox(confirm('简单斜率分析\n选择Johnson-Neyman法?') ? 'simpleJN' : 'simple')
                 },
-                output() {
-                    return ``;
-                },
+                output() { return ``; },
                 initFunc() {
                     $('#dep').addTools(1);
                     $('#indep').addTools(1);
-                    $('#mod').addTools(3);
+                    $('#mod').addTools(1);
                 }
             },
             {
@@ -918,13 +919,13 @@
                 confirm() { this.writeData(this.$('.data'), 'simple') },
                 update() {
                     return `选点法` + ['-1', '0', '+1'].map(e =>
-                        this.dataElm(`m1_simple1`, 'B,t,p', { label: e })
-                    ).join('');
+                        this.dataElm(`m1_simple1`, 'B,t,df,p', { label: e })
+                    ).join('').replace(/df\"/, `$& onchange="window.$('#m1_simple div[id] input[placeholder=df]',1).forEach(e=>e.value=this.value)"`);
                 },
                 output() {
-                    return `简单斜率分析发现，${m1.simple.map(({ B, t, p }, i) =>
+                    return `简单斜率分析发现，${m1.simple.map(({ B, t, df, p }, i) =>
                         `当${m1.name}${'低等高'[i]}于${i == 1 ? '均值' : '1个标准差'}时，${i1.name}对${d1.name}的${op.ifRes('orient', B)}向预测作用${op.ifRes('p*', p)}，`
-                        + ` B = ${B.toFixed(2)}, t = ${t.toFixed(2)}, ${op.ifRes('p***', p)}`
+                        + ` B = ${B.toFixed(2)}, t(${df}) = ${t.toFixed(2)}, ${op.ifRes('p***', p)}`
                     ).join('；')}。`
                 },
                 initFunc() { this.$('.data').id = 'm1_simple'; },
