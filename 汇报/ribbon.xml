@@ -1,0 +1,14 @@
+<customUI xmlns="http://schemas.microsoft.com/office/2006/01/customui" onLoad="OnAddinLoad">
+    <ribbon startFromScratch="false">
+        <tabs>
+            <tab id="wpsAddinTab" label="汇报">
+				<group id="Fn_grp" label="功能组">
+                    <button id="format" label="调整格式" onAction="adjustFormat" enabled="true" imageMso="Zoom100" size="large"/>
+				</group>
+                <group  id="Other_grp" label="其他">
+                    <button id="TaskPane" label="帮助" onAction="ShowHelp" enabled="true" imageMso="Help" size="large"/>
+                </group>
+            </tab>
+        </tabs>
+    </ribbon>
+</customUI>

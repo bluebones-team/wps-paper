@@ -1,0 +1,33 @@
+<customUI xmlns="http://schemas.microsoft.com/office/2006/01/customui" onLoad="onload">
+    <ribbon startFromScratch="false">
+        <tabs>
+            <tab id="paper" label="论文">
+                <group id="Refer_grp" label="参考文献">
+                    <button id="format" label="检查索引" onAction="checkCiteFormat.step()" imageMso="Spelling" size="large"
+                        screentip="检查参考文献是否按APA格式进行索引" supertip="请先选中参考文献"/>
+                    <button id="context" label="核对索引" onAction="matchCites.step()" imageMso="FormControlCheckBox" size="large"
+                        screentip="核对正文索引和参考文献列表是否一一对应" supertip="请先选中正文"/>
+                </group>
+                <group id="Result_grp" label="结果">
+                    <button id="write" label="撰写结果" onAction="writeResult" imageMso="CharacterBorder" size="large"
+                        screentip="通过输入统计数据自动生成结果部分" supertip="单击打开网页程序"/>
+                    <button id="link" label="引用" onAction="textLink.step()" imageMso="Text" size="small"
+                        screentip="新建文本链接" supertip="请先选中文本"/>
+                </group>
+                <group id="Chart_grp" label="图表">
+                    <button id="figure" label="作图" onAction="addFigure.step()" imageMso="ChartInsert" size="small"/>
+                    <button id="table" label="作表" onAction="addTable.step()" imageMso="TableDesign" size="small"
+                        screentip="以三线表格式粘贴表格" supertip="请先复制表格"/>
+                    <button id="" label="流程图" onAction="addFlowChart.step()" imageMso="TracePrecedents" size="large"/>
+                </group>
+                <group  id="Other_grp" label="其他">
+                    <button id="" label="创建框架" onAction="createFrame.step()" imageMso="Zoom100" size="large"/>
+                    <button id="parser" label="格式解析" onAction="formatSyntaxParser.step()" imageMso="XmlStructure" size="large"
+                        screentip="对格式文本进行解析" supertip="请先选中需要解析的文本"/>
+                    <!-- <button id="test" label="测试" onAction="test" imageMso="Text" size="small"/> -->
+                    <button id="TaskPane" label="帮助" onAction="showHelp" imageMso="Help" size="large"/>
+                </group>
+            </tab>
+        </tabs>
+    </ribbon>
+</customUI>
