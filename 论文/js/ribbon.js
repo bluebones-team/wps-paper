@@ -540,7 +540,7 @@ function update() {
         const data = await res.json();
         if (res.ok) {
             const { tag_name, body, zipball_url } = data;
-            if ($.version !== tag_name) {
+            if ($.version == tag_name) {
                 alert('已是最新版');
             } else if (confirm(`是否下载最新版?\n版本: ${tag_name}\n描述: ${body}`)) {
                 open_url_in_local(zipball_url);

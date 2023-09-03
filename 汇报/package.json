@@ -1,9 +1,0 @@
-{
-	"name": "汇报",
-	"addonType": "wpp",
-	"version": "1.0.0",
-	"description": "",
-	"devDependencies": {
-		"wps-jsapi": "latest"
-	}
-}
