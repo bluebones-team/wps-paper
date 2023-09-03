@@ -2,6 +2,7 @@ const sel = () => wps.Selection;
 const doc = () => wps.ActiveDocument;
 const Enum = wps.Enum;
 const $ = {
+    version: 'v23.9-alpha.1',
     refer_cites: [],
     comments: [],
     bookmarks: collection_operator(doc().Bookmarks),

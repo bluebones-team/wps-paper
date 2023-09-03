@@ -18,24 +18,8 @@
         };
     </script>
     <style>
-        :root {
-            --primary-color: #444;
-            --secondary-color: #666;
-            --accent-color: #eee;
-        }
-
-        header {
-            position: fixed;
-            top: 0;
-            width: 100%;
-            height: 20px;
-            background-color: #000;
-            color: #fff;
-        }
-
-        /* 背景颜色和字体 */
         body {
-            background-color: var(--accent-color);
+            background-color: #eee;
             /* font-family: "微软雅黑" ; */
             margin: 0;
             padding: 0;
@@ -48,22 +32,10 @@
             display: none;
         }
 
-        cite {
-            display: block;
-            text-align: center;
-            font-size: 1px;
-        }
-
         /* 引用列表 */
         #refer {
             list-style-type: none;
-            background-color: #fff;
-            box-shadow: 0 0 8px var(--primary-color);
-            border-radius: 15px;
-            padding: 10px;
-            margin: 30px auto;
-            margin-bottom: 0px;
-            width: 80%;
+            padding: 0 10px;
         }
 
         #refer>li {
@@ -74,25 +46,12 @@
 
         #refer>li:hover {
             font-weight: bold;
-            background-color: var(--accent-color);
         }
 
         /* 内容区域 */
         #content {
-            background-color: #fff;
-            box-shadow: 0 0 8px var(--primary-color);
-            margin: 20px;
-            padding: 20px;
-            border-radius: 15px;
-            width: auto;
-            /* color: #333; */
-            font-size: unset;
-        }
-
-        /* 加载信息 */
-        #info {
-            margin-top: 20px;
-            text-align: center;
+            padding: 15px;
+            border-top: 2px solid;
         }
 
         /* md部分 */
@@ -114,7 +73,7 @@
             padding: 1px 40px;
             font-size: small;
             color: purple;
-            background-color: #eee;
+            background-color: #fff;
         }
 
         code {
@@ -138,23 +97,15 @@
 </head>
 
 <body>
-    <header name="刷新" onclick="location.reload()">
-        <cite>2023.9.1版</cite>
-    </header>
     <ul id="refer">
         <li onclick="open_url_in_local(apa)">APA索引格式</li>
         <li onclick="open_url_in_local(aps)">《心理学报》索引格式</li>
-        <li onclick="open_url_in_local(help.deploy)">最新版文档</li>
         <li onclick="open_url_in_local(help.video)">视频教程</li>
     </ul>
     <div id="content"></div>
-    <!-- 调试信息 -->
-    <span id="info" style="font-size: small;">
-        <hr>
-    </span>
     <script>
-        //调试信息
-        const info = Object.assign(document.querySelector('#info'), {
+        const content = document.querySelector('#content');
+        const info = Object.assign(content, {
             add(text, tag) {
                 if (tag) text = `<${tag}>${text}</${tag}>`;
                 info.innerHTML += `<br>${text}`;
@@ -162,13 +113,13 @@
             err(msg, line = '') {
                 info.innerHTML += `<br><i style='color:red;'>${line}&emsp;${msg}<i>`;
             },
-        });/* 
-        addEventListener('error', err => info.err(err.message, err.lineno));
-        addEventListener('unhandledrejection', ({ reason }) => { //捕获promise错误
+        });
+        window.addEventListener('dblclick', () => location.reload());
+        window.addEventListener('error', ({ message, lineno }) => info.err(message, lineno));
+        window.addEventListener('unhandledrejection', ({ reason }) => {
             info.err(reason + '', reason.stack.split(':').reverse()[1]);
-        }); */
-        //添加script标签
-        async function addScript(src) {
+        });
+        function addScript(src) {
             const libName = src.split('/').at(-1);
             info.add(`正在加载&emsp;${libName}...`);
             return new Promise((resolve, reject) => {
@@ -188,34 +139,34 @@
                 document.head.appendChild(elm);
             });
         }
-        //请求文件
         function fetchFile(fileUrl) {
             fetch(fileUrl).then(res => {
                 if (res.ok) {
                     res.text().then(text => {
                         info.add('获取文件成功');
-                        document.querySelector('#content').innerHTML = marked.parse(text);
-                        info.style.display = 'none';
+                        parseMD(text);
                     });
                 } else {
                     info.err(`获取文件失败&emsp;${res.status}`);
-                    info.add(`<a href=${fileUrl}>文件链接</a>`, 'cite');
-                    info.add('请尝试科学上网', 'h2');
+                    info.add(res.url, 'cite');
+                    info.add('请查看<a onclick="open_url_in_local(help.deploy)">最新版文档</a>', 'h2');
                 }
             }, err => {
-                info.err(err.stack); // TypeError: Failed to fetch ...
-                info.add(`<a href=${fileUrl}>文件链接</a>`, 'cite');
-                info.add('文件链接错误', 'h2');
+                info.err(err.stack); // TypeError: Failed to fetch ...                
+                info.add(res.url, 'cite');
+                info.add('请查看<a onclick="open_url_in_local(help.deploy)">最新版文档</a>', 'h2');
             });
         }
-        Promise.all([
-            addScript(libs.marked),
-        ]).then(() => {
-            info.add('正在获取文件');
-            fetchFile(help.local);
-        }, () => {
-            info.add('资源请求错误<br>请点击<b>最新版文档</b>');
-        });
+        function parseMD(text) {
+            Promise.all([
+                addScript(libs.marked),
+            ]).then(() => {
+                content.innerHTML = marked.parse(text);
+            }, () => {
+                info.add('资源请求错误<br>请联系作者', 'h2');
+            });
+        }
+        fetchFile(help.local);
     </script>
 </body>
 

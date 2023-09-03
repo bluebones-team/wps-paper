@@ -530,6 +530,32 @@ function showHelp(control) {
     }
     return true
 }
+function update() {
+    const get_latest_api = 'https://api.github.com/repos/Cubxx/wpsAcademic/releases/latest';
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), 3e3);
+    fetch(get_latest_api, {
+        signal: controller.signal,
+    }).then(async res => {
+        const data = await res.json();
+        if (res.ok) {
+            const { tag_name, body, zipball_url } = data;
+            if ($.version !== tag_name) {
+                alert('已是最新版');
+            } else if (confirm(`是否下载最新版?\n版本: ${tag_name}\n描述: ${body}`)) {
+                open_url_in_local(zipball_url);
+            }
+        } else {
+            alert('返回无效响应\n' + data.message);
+        }
+    }).catch(err => {
+        const info = err.name == 'AbortError'
+            ? '连接GitHub超时'
+            : '无法连接GitHub';
+        alert(info + '\n请尝试科学上网');
+    });
+    return !0;
+}
 function test() {
     return !0;
 }
@@ -608,6 +634,12 @@ const UI = function (ui) {
             Label: '帮助',
             Screentip: '',
             Supertip: '',
+        },
+        o3: {
+            Enabled: true,
+            Label: '更新',
+            Screentip: '当前版本',
+            Supertip: $.version,
         },
     },
 });
