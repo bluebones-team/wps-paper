@@ -1,14 +1,16 @@
+const sel = () => wps.Selection;
+const doc = () => wps.ActiveDocument;
 const Enum = wps.Enum;
 const $ = {
     refer_cites: [],
     comments: [],
+    bookmarks: collection_operator(doc().Bookmarks),
 };
 /**
  * 同时修改多个属性
  */
-Object.prototype.set = function (config = {}) {
-    Object.assign(this, config);
-    return this;
+Object.prototype.set = function (...configs) {
+    return Object.assign(this, ...configs);
 };
 /**
  * 数组去重，包括对象数组
@@ -28,15 +30,13 @@ Function.prototype.step = function (note) {
         try {
             this(...args);
         } catch (err) {
-            alert(err.message);
+            alert(err + '');
             console.error(err);
         }
         wps.UndoRecord.EndCustomRecord();
         return !0
     }
 };
-const sel = () => wps.Selection;
-const doc = () => wps.ActiveDocument;
 function open_url_in_local(url) {
     wps.OAAssist.ShellExecute(url);
 }
@@ -54,7 +54,7 @@ function add_comment(range, content) {
 }
 function set_font_format(Font, config = {}) {
     Font.Reset();
-    Object.assign(Font, {
+    Font.set({
         Bold: !1,
         Italic: !1,
         Color: 0,
@@ -66,7 +66,7 @@ function set_font_format(Font, config = {}) {
 function set_paragraph_format(Paragraph, config = {}) {
     Paragraph.Reset();
     Paragraph.Space15(); //1.5倍行距
-    Object.assign(Paragraph, {
+    Paragraph.set({
         SpaceAfter: 0, //段后间距
         SpaceBefore: 0,
         CharacterUnitLeftIndent: 0, //左缩进量
@@ -74,12 +74,13 @@ function set_paragraph_format(Paragraph, config = {}) {
         CharacterUnitFirstLineIndent: 0, //首行缩进
     }, config);
 }
-/**
- * 添加 书签-域 链接
- */
-function add_BookmarkField_link(source, refer, name) {
-    doc().Bookmarks.Add(name, source);
-    doc().Fields.Add(refer).Code.Text = ` REF ${name} \\h `;
+function add_bookmark(range, name = `_link_${+new Date()}`) {
+    return doc().Bookmarks.Add(name, range);
+}
+function cite_bookmark(bookmark, range = sel().Range) {
+    const field = doc().Fields.Add(range);
+    field.Code.Text = ` REF ${bookmark.Name} \\h `;
+    field.Update();
 }
 /**
  * 返回集合对象操作器
@@ -108,7 +109,6 @@ function collection_operator(collection) {
                 return collection.Item(index + 1);
             if (index < 0 && index >= -len)
                 return collection.Item(len + index + 1);
-            throw '索引超出长度'
         },
         /**
          * 数组切片

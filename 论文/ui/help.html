@@ -8,12 +8,13 @@
         var apa = 'https://apastyle.apa.org/style-grammar-guidelines/references/elements-list-entry',
             aps = 'https://journal.psych.ac.cn/xlxb/fileup/0439-755X/ITEM/20220223114333.pdf';
         var help = {
-            'deploy': 'https://github.com/Cubxx/wpsAcademic/blob/main/论文/README.md',
-            'online': 'https://cubxx.github.io/wpsAcademic/论文/README.md',
-            'local': '../README.md',
+            deploy: 'https://github.com/Cubxx/wpsAcademic/blob/main/论文/README.md',
+            online: 'https://cubxx.github.io/wpsAcademic/论文/README.md',
+            local: '../README.md',
+            video: 'https://www.bilibili.com/list/525570753?sid=3253331',
         };
         var libs = {
-            'marked': "https://cdnjs.cloudflare.com/ajax/libs/marked/0.6.2/marked.min.js",
+            marked: "https://cdnjs.cloudflare.com/ajax/libs/marked/0.6.2/marked.min.js",
         };
     </script>
     <style>
@@ -122,13 +123,16 @@
 
         table {
             border-collapse: collapse;
+            color: teal;
+        }
+
+        thead {
+            border-bottom: 1px solid;
         }
 
         th,
         td {
-            text-align: center;
-            padding: 0 10px;
-            border: 1px solid;
+            padding: 8px;
         }
     </style>
 </head>
@@ -141,6 +145,7 @@
         <li onclick="open_url_in_local(apa)">APA索引格式</li>
         <li onclick="open_url_in_local(aps)">《心理学报》索引格式</li>
         <li onclick="open_url_in_local(help.deploy)">最新版文档</li>
+        <li onclick="open_url_in_local(help.video)">视频教程</li>
     </ul>
     <div id="content"></div>
     <!-- 调试信息 -->

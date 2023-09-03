@@ -16,6 +16,10 @@
             opacity: 0.5;
         }
 
+        hr {
+            border: 1px solid;
+        }
+
         body {
             margin: 20px;
         }
@@ -109,8 +113,8 @@
         }
 
         /* data样式 */
-        .data div[id]+* {
-            border-top: 1px solid;
+        .data div[id]+div {
+            border-top: 1px solid darkgrey;
         }
 
         /* editor样式 */
@@ -228,11 +232,17 @@
                 // 添加不可删除、不可修改、不可枚举的属性
                 Object.keys(o).forEach(k => o[k] = { value: o[k] });
                 Object.defineProperties(p, o);
-            } else Object.assign(p, o);
+            } else {
+                Object.assign(p, o);
+            }
         };
         const { toFixed } = Number.prototype;
         const { insertBefore, appendChild } = Node.prototype;
-        Number.prototype.toFixed = function (n) { return toFixed.call(+`${Math.round(`${this}e${n}`)}e-${n}`, n) };
+        Expand(0, Number.prototype, {
+            toFixed(n) {
+                return toFixed.call(+`${Math.round(`${this}e${n}`)}e-${n}`, n)
+            },
+        });
         Expand(1, Object.prototype, {
             or(k, a, b) {
                 const L = this[k] === a;
@@ -275,7 +285,7 @@
                 if (tree.childElementCount < max) {
                     function selfAdd(attribute) {
                         if (attribute) {
-                            let index = parseInt(attribute.slice(-1));
+                            const index = parseInt(attribute.slice(-1));
                             if (!isNaN(index)) return attribute.slice(0, -1) + (index + 1);
                         }
                         return ''
@@ -303,9 +313,9 @@
                 this.Mode = Mode[db.mode];
                 this.editor = this.addEditor(this.onCheck, this.onEdit);
                 // 更新元素
-                if (this.update) { let r = this.update(); if (r) this.$('.data').innerHTML = r; }
+                const newHTML = this.update?.(); if (newHTML) this.$('.data').innerHTML = newHTML;
                 // label 对齐
-                let list = [...this.$('label', 1)],
+                const list = this.$('label', 1),
                     max = Math.max(...list.map(e => parseFloat(getComputedStyle(e).width)));
                 list.forEach(e => e.style.width = max + 'px');
                 // 最后执行
@@ -314,9 +324,14 @@
             },
             datas() { return [...this.$(`.data`).children] },
             dataElm(id, exp = 'name|placeholder|type|other,', config = {}) {
-                let arr = exp.split(',').map(e => e.split('|'));
-                let inputs = arr.map(e => `<input id="${id}_${e[0]}" type="${e[2] || 'number'}" placeholder="${e[1] || e[0]}" ${e[3] || ''}>`).join('');
-                let dataElm = addElm(config.tag || 'div', { id: `${id}_data`, innerHTML: inputs, }, config);
+                const propNames = exp.split(',').map(e => e.split('|'));
+                const inputHTMLs = propNames.map(e =>
+                    `<input id="${id}_${e[0]}" type="${e[2] || 'number'}" placeholder="${e[1] || e[0]}" ${e[3] || ''}>`
+                ).join('');
+                const dataElm = addElm(config.tag || 'div', {
+                    id: `${id}_data`,
+                    innerHTML: inputHTMLs,
+                }, config);
                 // 插入元素 -> 父容器
                 config.elms?.forEach(e => {
                     typeof e.index == 'number' ?
@@ -329,54 +344,64 @@
                 return dataElm.outerHTML;
             },
             readTextareaData() {
-                let textarea = this.editor.$('textarea');
-                let text = textarea.value.replace(/ +/g, '').replace(/\n$/, ''),
+                const textarea = this.editor.$('textarea');
+                const text = textarea.value.replace(/ +/g, '').replace(/\n$/, ''),
                     arr = text.split('\n').map(e => e.split('\t'));
                 textarea.value = '';
                 if (arr[1]) {
-                    let list = this.datas().map(e => e.$('input[placeholder]', 1));
+                    const list = this.datas().map(e => e.$('input[placeholder]', 1));
                     arr.forEach((e, r) => {
                         e.forEach((ee, c) => { if (list[r]?.[c]) list[r][c].value = ee; });
                     });
                 }
             },
             writeData(dataElm, prop) {
+                // 获取id
                 let id = dataElm.id.split('_')[0];
-                if (id === '' && dataElm.className == 'data') id = dataElm.parentElement.id.split('_')[0];
-                if (id === '') throw `提取id为空字符 ${dataElm.outerHTML.slice(0, 50)}`;
-                window[id] = window[id] || { name: id };
-                let obj = window[id];
-                function data(elm) { // 根据单个元素 返回数据对象
-                    let obj = {};
+                if (id === '' && dataElm.className == 'data') {
+                    id = dataElm.parentElement.id.split('_')[0];
+                }
+                if (id === '') {
+                    throw `提取id为空字符 ${dataElm.outerHTML.slice(0, 50)}`;
+                }
+                // 获取obj
+                let obj = window[id] ||= { name: id };
+                if (typeof prop == 'string') {
+                    // 多个元素 写入数组
+                    !function set(propNames) {
+                        const name = propNames.shift();
+                        const hasElm = !!propNames.length;
+                        obj = obj[name] = hasElm ? {} : [];
+                        hasElm && set(propNames);
+                    }(prop.split('.'));
+                    Object.assign(obj, dataElm.$('div[id]', 1).map(elm2obj));
+                } else {
+                    // 单个元素 写入对象
+                    Object.assign(obj, elm2obj(dataElm));
+                }
+                function elm2obj(elm) {
+                    // 根据单个元素 返回数据对象
+                    const obj = {};
                     elm.$('input[id]', 1).forEach(e => {
                         obj[e.id.match(/_([^_]+)$/)[1]] = e.type == 'number' ? +e.value : e.value;
                     });
                     return obj;
                 }
-                if (typeof prop == 'string') { // 多个元素 写入数组
-                    !function selet(arr) {
-                        let p = arr.shift();
-                        if (arr[0]) { obj = obj[p] = {}; selet(arr); }
-                        else { obj = obj[p] = []; }
-                    }(prop.split('.'));
-                    Object.assign(obj, [...dataElm.$('div[id]', 1)].map(data));
-                } else { // 单个元素 写入对象
-                    Object.assign(obj, data(dataElm));
-                }
                 return window[id];
             },
             onCheck() {
                 this.readTextareaData();
-                const colors = function (isOK) { return ['#f005', '#0f05'][+isOK]; };
-                const errInput = [...this.$('input[placeholder]', 1)].filter(e => {
+                const colors = isOK => ['#f005', '#0f05'][+isOK];
+                const errInput = this.$('input[placeholder]', 1).filter(e => {
                     e.style.backgroundColor = colors(e.pass = true);
                     return e.value === '';
                 });
-                if (errInput[0]) errInput.forEach(e => e.style.backgroundColor = colors(e.pass = false));
-                else this.confirm(), console.log(this.id + '\n', this.output());
+                errInput[0]
+                    ? errInput.forEach(e => e.style.backgroundColor = colors(e.pass = false))
+                    : (this.confirm(), console.log(this.id + '\n', this.output()));
             },
             onEdit() {
-                [... this.$('input[placeholder]', 1)].forEach(e => {
+                this.$('input[placeholder]', 1).forEach(e => {
                     e.style.backgroundColor = e.pass = '';
                 });
             },
@@ -404,7 +429,7 @@
                                 <textarea cols="2" rows="1"></textarea>`,
                 }));
                 elm.$('input[value=确认]').onclick = function () {
-                    [..._this.$('input', 1)].filter(e => e !== this).forEach(e => e.disabled = !e.disabled);
+                    _this.$('input', 1).filter(e => e !== this).forEach(e => e.disabled = !e.disabled);
                     elm.$('textarea').or('disabled', true, false);
                     elm.$('textarea').style.or('resize', '', 'none');
                     [func1, func2][+!this.or('value', '确认', '编辑')]?.call(_this);
@@ -415,16 +440,16 @@
                 return elm;
             },
             insertBefore(node, pos) {
-                let o = node.id && $(`#${node.id}`);
-                if (!o) return insertBefore.call(this, node, pos);
-                else console.log(`已存在`, o);
-                return o;
+                const o = node.id && $(`#${node.id}`);
+                return o
+                    ? (console.log(`已存在`, o), o)
+                    : insertBefore.call(this, node, pos);
             },
             appendChild(node) {
-                let o = node.id && $(`#${node.id}`);
-                if (!o) return appendChild.call(this, node);
-                else console.log(`已存在`, o);
-                return o;
+                const o = node.id && $(`#${node.id}`);
+                return o
+                    ? (console.log(`已存在`, o), o)
+                    : appendChild.call(this, node);
             },
         });
     </script>
@@ -479,12 +504,13 @@
                 this.addBox('base');
                 Mode.update();
             }
-            addBox(boxID) { return Mode.addBox(this.boxes.find(e => e.id === boxID)) }
+            addBox(boxID) {
+                return Mode.addBox(this.boxes.find(e => e.id === boxID));
+            }
             static length = 0;
             static output() {
-                const o = $('#output');
-                function c() {
-                    Mode.addBox({
+                return $('#output')?.update()
+                    ?? Mode.addBox({
                         id: 'output',
                         confirm() {
                             this.$('.data').contentEditable = false;
@@ -519,7 +545,7 @@
                                     .replace(/(t|Z)分数/g, `${txt('$1', 'i')}分数`)
                                     .replace(/ -(\d)/g, ` —$1`);
                             }
-                            let arr = $('script ~.box', 1).map(e => e.output()).filter(e => e);
+                            const arr = $('script ~.box', 1).map(e => e.output()).filter(e => e);
                             arr.unshift(arr.splice(0, 2).join('')); //前两段合并
                             this.$('.data').innerHTML = arr.map(e => txt(e, 'p')).join('');
                         },
@@ -528,8 +554,6 @@
                             this.editor.$('textarea').style.display = 'none';
                         },
                     });
-                }
-                o?.update() ?? c()
             }
             static addBox(config) {
                 $('#output')?.remove();
@@ -544,29 +568,30 @@
                     },
                 }, config)).init();
                 // 自动填充
-                db.autoFill && box.$('input', 1).forEach(e => {
-                    e.value = e.value || (function () {
-                        switch (e.type) {
-                            case 'number': switch (e.placeholder) {
-                                case 'p': return (Math.random() * 0.1).toFixed(3);
-                                case 'df': return (Math.random() * 100).toFixed(0);
-                                case 'df1': return (Math.random() * 100).toFixed(0);
-                                case 'df2': return (Math.random() * 100).toFixed(0);
-                                default: return (Math.random() * 5).toFixed(3);
+                db.autoFill
+                    && box.$('input', 1).forEach(e => {
+                        e.value ||= function () {
+                            switch (e.type) {
+                                case 'number': switch (e.placeholder) {
+                                    case 'p': return (Math.random() * 0.1).toFixed(3);
+                                    case 'df': return (Math.random() * 100).toFixed(0);
+                                    case 'df1': return (Math.random() * 100).toFixed(0);
+                                    case 'df2': return (Math.random() * 100).toFixed(0);
+                                    default: return (Math.random() * 5).toFixed(3);
+                                }
+                                case 'text': switch (e.placeholder) {
+                                    case '因变量': return 'Y';
+                                    case '自变量': return 'X';
+                                    case '中介变量': return 'M1';
+                                    case '调节变量': return 'M1';
+                                    case '水平1': return 'Lv1';
+                                    case '水平2': return 'Lv2';
+                                    default: return `${String.fromCharCode(...[0, 0].map(e => parseInt(Math.random() * (90 - 65 + 1) + 65, 10)))}`;
+                                };
+                                default: return e.type;
                             }
-                            case 'text': switch (e.placeholder) {
-                                case '因变量': return 'Y';
-                                case '自变量': return 'X';
-                                case '中介变量': return 'M1';
-                                case '调节变量': return 'M1';
-                                case '水平1': return 'Lv1';
-                                case '水平2': return 'Lv2';
-                                default: return `${String.fromCharCode(...[0, 0].map(e => parseInt(Math.random() * (90 - 65 + 1) + 65, 10)))}`;
-                            };
-                            default: return e.type;
-                        }
-                    })(e);
-                });
+                        }(e);
+                    });
                 return box;
             }
             static update() {
@@ -576,7 +601,7 @@
                 const vArr = [{
                     type: 'd', elm: $('#dep'), get(e) { return { name: e.value } },
                 }, {
-                    type: 'i', elm: $('#indep'), get(e) { return { name: e.$('input.name').value, ls: [...e.$('input.level', 1)].map(e => e.value), } },
+                    type: 'i', elm: $('#indep'), get(e) { return { name: e.$('input.name').value, ls: e.$('input.level', 1).map(e => e.value), } },
                 }, {
                     type: 'm', elm: $('#med') || $('#mod'), get(e) { return { name: e.value, } }
                 }];
@@ -584,7 +609,7 @@
                     .forEach(v => {
                         window[`${v.type}s`] = [];
                         for (let i = 1; i <= v.elm.childElementCount - 1; i++) {
-                            let id = v.type + i,
+                            const id = v.type + i,
                                 elm = window[id] = $(`#${id}`);
                             Object.assign(elm, v.get(elm));
                             window[`${v.type}s`].push(window[id]);
@@ -604,14 +629,13 @@
                                 <input class="level" type="text" placeholder="水平1">
                                 <input class="level" type="text" placeholder="水平2">
                             </div></div>`,
-                datas() {
-                    return $('#indep').$('div', 1);
-                },
+                datas() { return $('#indep').$('div', 1); },
                 confirm() {
                     Mode.update();
                     this.Mode.addBox('MSDtable');
-                    if (is.length + i1.ls.length == 3) this.Mode.addBox('Ttest');
-                    else this.Mode.addBox('Ftest');
+                    (is.length + i1.ls.length == 3)
+                        ? this.Mode.addBox('Ttest')
+                        : this.Mode.addBox('Ftest');
                 },
                 output() {
                     let method = '';
@@ -627,7 +651,7 @@
                 },
                 initFunc() {
                     $('#dep').addTools(1);
-                    $('#indep').addTools(3);
+                    $('#indep').addTools(2); // 当前MSD表格只能存储2个自变量的数据
                     $('#i1').addTools(5, 3);
                 }
             },
@@ -636,36 +660,38 @@
                 innerHTML: `<table class="data"></table>`,
                 datas() { return [...this.$('.data').$('tbody').children] },
                 confirm() {
-                    let dataArr = this.datas().map(e => {
-                        let row = [...e.$('.MSD', 1)].map(ee => {
-                            return {
-                                M: parseFloat(ee.children[0].value),
-                                SD: parseFloat(ee.children[1].value)
-                            }
-                        });
+                    const dataArr = this.datas().map(e => {
+                        const row = e.$('.MSD', 1).map(ee => ({
+                            M: parseFloat(ee.children[0].value),
+                            SD: parseFloat(ee.children[1].value),
+                        }));
                         return [...row, { M: row.mean('M'), SD: row.mean('SD') }]
                     });
-                    let i2 = window['i2'] || { ls: [] };
+                    const i2 = window['i2'] || { ls: [] };
                     this.MSDdata = {
                         rows: [...i2.ls, 'mean'],
                         columns: [...i1.ls, 'mean'],
-                        data: [...dataArr, dataArr[0].map((e, i) => {
-                            return {
-                                M: dataArr.map(ee => ee[i]).mean('M'),
-                                SD: dataArr.map(ee => ee[i]).mean('SD')
-                            }
-                        })],
+                        data: [...dataArr, dataArr[0].map((e, i) => ({
+                            M: dataArr.map(ee => ee[i]).mean('M'),
+                            SD: dataArr.map(ee => ee[i]).mean('SD')
+                        }))],
                     };
                 },
                 update() {
-                    let head, body;
-                    let i2 = window['i2'] || { name: '', ls: [''] };
-                    head = `<tr>${[
-                        `<th>${i2.name}\\${i1.name}</th>`,
-                        ...i1.ls.map((e, i) => `<th id="i1l${i + 1}">${e}</th>`)
-                    ].join('')}</tr>`;
-                    body = i2.ls.map((e, i) => `<tr><td id="i2l${i + 1}">${e}</td>
-                                    ${i1.ls.map((ee, j) => this.dataElm(`i2l${i + 1}&i1l${j + 1}_MSD`, 'M,SD', { tag: 'td', className: 'MSD' })).join('')}</tr>`).join('');
+                    const i2 = window['i2'] || { name: '', ls: [''] };
+                    const head =
+                        `<tr><th>${i2.name}\\${i1.name}</th>`
+                        + i1.ls.map((e, i) =>
+                            `<th id="i1l${i + 1}">${e}</th>`
+                        ).join('') + '</tr>';
+                    const body = i2.ls.map((e, i) =>
+                        `<tr><td id="i2l${i + 1}">${e}</td>`
+                        + i1.ls.map((ee, j) =>
+                            this.dataElm(`i2l${i + 1}&i1l${j + 1}_MSD`, 'M,SD', {
+                                tag: 'td',
+                                className: 'MSD',
+                            })).join('') + '</tr>'
+                    ).join('');
                     return `<thead>${head}</thead><tbody>${body}</tbody>`;
                 },
             },
@@ -673,13 +699,17 @@
                 id: 'Ttest',
                 confirm() { this.datas().map(this.writeData) },
                 update() {
-                    return this.dataElm('i1_Ttest', 't,df,p,CohenD|Cohen d,ciL|CI下限,ciU|CI上限',
-                        { elms: [{ elm: `<label>${i1.name}</label>` }] });
+                    return this.dataElm('i1_Ttest', 't,df,p,CohenD|Cohen d,ciL|CI下限,ciU|CI上限', {
+                        elms: [{
+                            elm: `<label>${i1.name}</label>`,
+                        }]
+                    });
                 },
                 output() {
                     return (function ({ ls, t, df, p, CohenD, ciL, ciU }) {
-                        let [l1, l2] = ls;
-                        let msd1 = op.MSD(l1), msd2 = op.MSD(l2);
+                        const [l1, l2] = ls;
+                        const msd1 = op.MSD(l1),
+                            msd2 = op.MSD(l2);
                         return `${op.sign(p, l1, l2, msd1, msd2)}, t(${df}) = ${t.toFixed(2)}, ${op.ifRes('p***', p)}, Cohen d = ${CohenD.toFixed(2)}, 90%CI[${`${ciL.toFixed(2)}, ${ciU.toFixed(2)}`}]。`
                     })(i1);
                 }
@@ -701,16 +731,24 @@
                 update() {
                     return is.flatMap((e, i) =>
                         is.choose(i + 1).map(es => {
-                            let id = es.map(e => e.id).join('×');
-                            if (i > 0) window[id] = { id: id, name: es.map(e => e.name).join('×'), is: es, };
-                            return this.dataElm(`${id}_Ftest`, 'F,df1,df2,p,eta2|η2,ciL|CI下限,ciU|CI上限', { elms: [{ elm: `<label>${window[id].name}</label>` }] });
+                            const id = es.map(e => e.id).join('×');
+                            if (i > 0) window[id] = {
+                                id,
+                                name: es.map(e => e.name).join('×'),
+                                is: es,
+                            };
+                            return this.dataElm(`${id}_Ftest`, 'F,df1,df2,p,eta2|η2,ciL|CI下限,ciU|CI上限', {
+                                elms: [{
+                                    elm: `<label>${window[id].name}</label>`,
+                                }]
+                            });
                         })
                     ).join('');
                 },
                 output() {
-                    return this.is.map(({ name, F, df1, df2, p, eta2, ciL, ciU }) => {
-                        return `${op.ifRes('ia', name)}${op.ifRes('p*', p)}, F(${df1}, ${df2}) = ${F.toFixed(2)}, ${op.ifRes('p***', p)}, η2 = ${eta2.toFixed(2)}, 90%CI[${`${ciL.toFixed(2)}, ${ciU.toFixed(2)}`}]`
-                    }).join('；') + '。';
+                    return this.is.map(({ name, F, df1, df2, p, eta2, ciL, ciU }) =>
+                        `${op.ifRes('ia', name)}${op.ifRes('p*', p)}, F(${df1}, ${df2}) = ${F.toFixed(2)}, ${op.ifRes('p***', p)}, η2 = ${eta2.toFixed(2)}, 90%CI[${`${ciL.toFixed(2)}, ${ciU.toFixed(2)}`}]`
+                    ).join('；') + '。';
                 },
             },
         ], {
@@ -746,22 +784,30 @@
                             <div class="data"></div>`,
                     confirm() { this.writeData(this.$(`.data`), 'simple'); },
                     update() {
-                        const simples = window[id].is.flatMap((e, i, arr) => {
-                            return arr[i].ls.flatMap(l => {
-                                return arr[+!i].ls.choose(2).map(ll => {
-                                    return { fi: e.name, fil: l, l1: ll[0], l2: ll[1] }
-                                });
-                            });
-                        });
+                        const simples = window[id].is.flatMap((e, i, arr) =>
+                            arr[i].ls.flatMap(l =>
+                                arr[+!i].ls.choose(2).map(ll => ({
+                                    fi: e.name,
+                                    fil: l,
+                                    l1: ll[0],
+                                    l2: ll[1]
+                                }))
+                            )
+                        );
                         return simples.map((e, i) =>
                             this.dataElm(`${id}_simple${i + 1}`,
-                                `fi|固定自变量|text|value="${e.fi}",fil|固定水平|text|value="${e.fil}",l1|水平1|text|value="${e.l1}",l2|水平2|text|value="${e.l2}",p`,
-                                { elms: [{ elm: ' :', index: 1 }], hasDel: 1 }
-                            )).join('');
+                                `fi|固定自变量|text|value="${e.fi}",fil|固定水平|text|value="${e.fil}",l1|水平1|text|value="${e.l1}",l2|水平2|text|value="${e.l2}",p`, {
+                                elms: [{
+                                    elm: ' :',
+                                    index: 1
+                                }],
+                                hasDel: 1
+                            })).join('');
                     },
                     output() {
-                        return `${this.i.name}的简单效应分析发现，${this.i.simple.map(function ({ l1, l2, p, fi, fil }) {
-                            let msd1 = op.MSD(fil, l1), msd2 = op.MSD(fil, l2);
+                        return `${this.i.name}的简单效应分析发现，${this.i.simple.map(({ l1, l2, p, fi, fil }) => {
+                            const msd1 = op.MSD(fil, l1),
+                                msd2 = op.MSD(fil, l2);
                             return `${fi}为${fil}时，${op.sign(p, l1, l2, msd1, msd2)}, ${op.ifRes('p***', p)}`
                         }).join('；')}。`
                     },
@@ -778,17 +824,13 @@
                                 <input class="level" type="text" placeholder="水平1">
                                 <input class="level" type="text" placeholder="水平2">
                             </div></div>`,
-                datas() {
-                    return $('#indep').$('div', 1);
-                },
+                datas() { return $('#indep').$('div', 1); },
                 confirm() {
                     Mode.update();
                     this.Mode.addBox('LinearModel');
                     this.Mode.addBox('Linear');
                 },
-                output() {
-                    return `以${ds[0].name}为因变量，${is.map(e => e.name).join('、')}为自变量，进行标准${is.length > 1 ? '多元' : ''}线性回归，各变量的相关矩阵见表1。`;
-                },
+                output() { return `以${ds[0].name}为因变量，${is.map(e => e.name).join('、')}为自变量，进行标准${is.length > 1 ? '多元' : ''}线性回归，各变量的相关矩阵见表1。`; },
                 initFunc() {
                     $('#dep').addTools(1);
                     $('#indep').addTools(9);
@@ -799,14 +841,16 @@
                 id: 'LinearModel',
                 confirm() { this.writeData(this.$('#model_data')); },
                 update() {
-                    let html = this.dataElm('model', `R2|调整后R方,F,df1,df2,p`,
-                        { elms: [{ elm: `<label>回归模型</label>` }] });
+                    const html = this.dataElm('model', `R2|调整后R方,F,df1,df2,p`, {
+                        elms: [{
+                            elm: `<label>回归模型</label>`
+                        }]
+                    });
                     return html.replace(/df2\"/, `$& onchange="$('#Linear .data div[id] input:nth-child(4)',1).forEach(e=>e.value=this.value)"`);
                 },
                 output() {
-                    return (function ({ R2, F, df1, df2, p }) {
-                        return `回归分析结果显示，整体模型调整后的解释方差为${(R2 * 1e2).toFixed(1)}%, F(${df1}, ${df2}) = ${F.toFixed(2)}, ${op.ifRes('p***', p)}。`
-                    })(window['model']);
+                    const { R2, F, df1, df2, p } = window['model'];
+                    return `回归分析结果显示，整体模型调整后的解释方差为${(R2 * 1e2).toFixed(1)}%, F(${df1}, ${df2}) = ${F.toFixed(2)}, ${op.ifRes('p***', p)}。`;
                 },
                 initFunc() { this.$('textarea').style.display = 'none'; },
             },
@@ -814,8 +858,11 @@
                 id: 'Linear',
                 confirm() { this.is = this.datas().map(this.writeData); },
                 update() {
-                    return is.map(({ id }) => this.dataElm(`${id}_Linear`, 'beta|标准β,t,df,p',
-                        { elms: [{ elm: `<label>${window[id].name}</label>` }] })).join('');
+                    return is.map(({ id }) => this.dataElm(`${id}_Linear`, 'beta|标准β,t,df,p', {
+                        elms: [{
+                            elm: `<label>${window[id].name}</label>`
+                        }],
+                    })).join('');
                 },
                 output() {
                     return '当其他自变量不变时，' + this.is.map(({ name, beta, t, df, p, ls }) =>
@@ -832,17 +879,13 @@
                                 <input class="name" type="text" placeholder="自变量">
                             </div></div>
                             <div id="med"><input id="m1" class="name" type="text" placeholder="中介变量"></div>`,
-                datas() {
-                    return $('#indep').$('div', 1);
-                },
+                datas() { return $('#indep').$('div', 1); },
                 confirm() {
                     Mode.update();
                     this.Mode.addBox('Mediation');
                     this.Mode.addBox('Indirect');
                 },
-                output() {
-                    return `通过回归分析考察在${i1.name}对${d1.name}的影响中${ms.map(e => e.name).join('、')}的中介作用，结果如图1所示。`;
-                },
+                output() { return `通过回归分析考察在${i1.name}对${d1.name}的影响中${ms.map(e => e.name).join('、')}的中介作用，结果如图1所示。`; },
                 initFunc() {
                     $('#dep').addTools(1);
                     $('#indep').addTools(1);
@@ -851,7 +894,7 @@
             },
             {
                 id: 'Mediation',
-                datas() { return [...this.$('.data>div[id]', 1)] },
+                datas() { return this.$('.data>div[id]', 1) },
                 confirm() { this.datas().forEach(e => this.writeData(e, 'args')); },
                 update() {
                     this.models = [];
@@ -861,7 +904,10 @@
                     });
                     return this.models.map(({ y, x }) =>
                         `<div id="${y.id}_model">${x.map((e, i) =>
-                            this.dataElm(e.id, `name|预测变量|text|value="${e.name}",beta|标准β,p`, { hasDel: 1, label: i ? ' ' : y.name })
+                            this.dataElm(e.id, `name|预测变量|text|value="${e.name}",beta|标准β,p`, {
+                                hasDel: 1,
+                                label: i ? ' ' : y.name,
+                            })
                         ).join('')}</div>`
                     ).join('<hr>');
                 },
@@ -877,15 +923,20 @@
                 id: 'Indirect',
                 confirm() { this.paths = this.datas().map(this.writeData); },
                 update() {
-                    return ms.map((e, i, arr) => arr.choose(i + 1).map(es => {
-                        let path = [i1.name, ...es.map(e => e.name), d1.name].join('→');
-                        return this.dataElm(`${path}`, 'effect|间接效应,rate|占比,ciL|CI下限,ciU|CI上限', { hasDel: 1, label: path })
-                    }).join('')).join('');
+                    return ms.map((e, i, arr) =>
+                        arr.choose(i + 1).map(es => {
+                            const path = [i1.name, ...es.map(e => e.name), d1.name].join('→');
+                            return this.dataElm(`${path}`, 'effect|间接效应,rate|占比,ciL|CI下限,ciU|CI上限', {
+                                hasDel: 1,
+                                label: path
+                            })
+                        }).join('')
+                    ).join('');
                 },
                 output() {
-                    return `${this.paths.map(function ({ name, effect, rate, ciL, ciU }) {
-                        return `${name}：间接效应为${effect.toFixed(2)}，占总效应${(rate * 1e2).toFixed(2)}%，95%BootCI[${ciL.toFixed(2)}, ${ciU.toFixed(2)}]`
-                    }).join('；')}。`;
+                    return this.paths.map(({ name, effect, rate, ciL, ciU }) =>
+                        `${name}：间接效应为${effect.toFixed(2)}，占总效应${(rate * 1e2).toFixed(2)}%，95%BootCI[${ciL.toFixed(2)}, ${ciU.toFixed(2)}]`
+                    ).join('；') + '。';
                 },
             }
         ]);
@@ -897,12 +948,10 @@
                                 <input class="name" type="text" placeholder="自变量">
                             </div></div>
                             <div id="mod"><input id="m1" class="name" type="text" placeholder="中介变量"></div>`,
-                datas() {
-                    return $('#indep').$('div', 1);
-                },
+                datas() { return $('#indep').$('div', 1); },
                 confirm() {
                     Mode.update();
-                    this.Mode.addBox(confirm('简单斜率分析\n选择Johnson-Neyman法?') ? 'simpleJN' : 'simple')
+                    this.Mode.addBox(confirm('简单斜率分析\n选择Johnson-Neyman法?') ? 'simpleJN' : 'simple');
                 },
                 output() { return ``; },
                 initFunc() {
@@ -927,10 +976,11 @@
                     ).join('').replace(/df\"/, `$& onchange="$('#m1_simple div[id] input[placeholder=df]',1).forEach(e=>e.value=this.value)"`);
                 },
                 output() {
-                    return `简单斜率分析发现，${m1.simple.map(({ B, t, df, p }, i) =>
-                        `当${m1.name}${'低等高'[i]}于${i == 1 ? '均值' : '1个标准差'}时，${i1.name}对${d1.name}的${op.ifRes('orient', B)}向预测作用${op.ifRes('p*', p)}，`
-                        + ` B = ${B.toFixed(2)}, t(${df}) = ${t.toFixed(2)}, ${op.ifRes('p***', p)}`
-                    ).join('；')}。`
+                    return '简单斜率分析发现，'
+                        + m1.simple.map(({ B, t, df, p }, i) =>
+                            `当${m1.name}${'低等高'[i]}于${i == 1 ? '均值' : '1个标准差'}时，${i1.name}对${d1.name}的${op.ifRes('orient', B)}向预测作用${op.ifRes('p*', p)}，`
+                            + ` B = ${B.toFixed(2)}, t(${df}) = ${t.toFixed(2)}, ${op.ifRes('p***', p)}`
+                        ).join('；') + '。';
                 },
                 initFunc() { this.$('.data').id = 'm1_simple'; },
             },
@@ -939,14 +989,16 @@
                 title: '简单斜率分析',
                 confirm() { this.writeData(this.$('.data'), 'simple') },
                 update() {
-                    return 'Johnson-Neyman' + this.dataElm(`m1_simple1`, 'pLine|正基准线,nLine|负基准线', { label: m1.name });
+                    return 'Johnson-Neyman' + this.dataElm(`m1_simple1`, 'pLine|正基准线,nLine|负基准线', {
+                        label: m1.name,
+                    });
                 },
                 output() {
-                    let { pLine, nLine } = m1.simple[0];
+                    const { pLine, nLine } = m1.simple[0];
                     pLine = pLine.toFixed(2);
                     nLine = nLine.toFixed(2);
                     // pLine < nLine 图像斜率为正
-                    let desc = `${m1.name}${pLine < nLine ? '低' : '高'}于${pLine}个标准差时，${i1.name}对${d1.name}的负向预测作用显著；`
+                    const desc = `${m1.name}${pLine < nLine ? '低' : '高'}于${pLine}个标准差时，${i1.name}对${d1.name}的负向预测作用显著；`
                         + `${m1.name}在${pLine}和${nLine}两个标准差之间时，${i1.name}对${d1.name}的预测作用不显著；`
                         + `${m1.name}${pLine < nLine ? '高' : '低'}于${nLine}个标准差时，${i1.name}对${d1.name}的正向预测作用显著`;
                     return `采用Johnson-Neyman方法考察${i1.name}对${d1.name}随${m1.name}的变化。结果如图1所示，以${m1.name}的Z分数${pLine}和${nLine}为分界。${desc}。`

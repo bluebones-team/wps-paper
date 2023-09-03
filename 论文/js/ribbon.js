@@ -236,31 +236,57 @@ function matchCites() {
 function writeResult() {
     confirm('是否打开最新版？')
         ? open_url_in_local(`https://cubxx.github.io/wpsAcademic/论文/ui/writeResult.html`)
-        : open_url_in_local(location.origin + '/ui/writeResult.html', '', 1080, 480);
+        : open_url_in_local(location.origin + '/ui/writeResult.html');
     return !0;
 }
-function textLink(control) {
-    if (sel().Text) {
-        add_BookmarkField_link(sel().Range, sel().Next(), `_Link_${+new Date()}`);
-    } else {
-        alert('请选择文本');
+const { createLink, insertLink } = function () {
+    let uncited_bookmark_name = '';
+    return {
+        createLink() {
+            // 删除之前没被引用的书签
+            const last_bookmark = $.bookmarks.at(-1);
+            if (uncited_bookmark_name === last_bookmark?.Name) {
+                last_bookmark.Delete();
+            }
+            if (sel().Type == Enum.wdSelectionNormal) {
+                uncited_bookmark_name = add_bookmark(sel().Range).Name;
+                alert('创建成功');
+            } else {
+                alert('请先选中文本');
+            }
+            return !0;
+        },
+        insertLink() {
+            const bookmark = $.bookmarks.at(-1);
+            if (bookmark) {
+                cite_bookmark(bookmark);
+                uncited_bookmark_name = '';
+            } else {
+                alert('请先创建文本链接');
+            }
+            return !0;
+        }
     }
-    doc().Fields.Update();
-    sel().Next().Select();
-    return !0;
-}
+}();
+
 function addFigure() {
-    let ps = sel().Paragraphs;
+    sel().Text = '';
     //图表
-    let shape = doc().InlineShapes.AddChart(Enum.xlColumnClustered);
-    shape.Chart.HasTitle = false;
-    shape.Chart.SetElement(Enum.msoElementErrorBarStandardError); // 添加标准误
-    shape.Range.Paragraphs.Alignment = Enum.wdAlignParagraphCenter;
-    shape.Select();
+    // const shape = doc().InlineShapes.AddChart(Enum.xlColumnClustered);
+    // shape.Chart.HasTitle = false;
+    // shape.Chart.SetElement(Enum.msoElementErrorBarStandardError); // 添加标准误
+    // shape.Range.Paragraphs.Alignment = Enum.wdAlignParagraphCenter;
+    // shape.Select();
     // shape.ConvertToShape(); // 转化为Shape对象
-    ps.Add(); ps.Add(); ps.Add(); ps.Add();
-    //图注
+    //
+    const ps = sel().Paragraphs;
+    ps.Add();
+    ps.Add();
+    ps.Add();
+    ps.Add();
     set_font_format(sel().Font);
+    collection_operator(sel().Paragraphs).map(set_paragraph_format);
+    //图注
     ps.Item(2).Range.Text = '注：±1个标准误\r';
     ps.Item(2).Range.Paragraphs.Alignment = Enum.wdAlignParagraphLeft;
     //图题
@@ -304,7 +330,6 @@ function addTable() {
         return !0;
     }
     const table = sel().Tables.Item(1);
-
     //设置表格格式
     const rows_operator = collection_operator(table.Rows);
     rows_operator.map(row => {
@@ -313,7 +338,7 @@ function addTable() {
     table.AutoFitBehavior(2); // 根据活动窗口的宽度自动调整表格大小
     table.Borders.InsideLineStyle = 0;
     table.Borders.OutsideLineStyle = 0;
-    const set_border_line = (row, orientation, LineWidth) => {
+    function set_border_line(row, orientation, LineWidth) {
         row.Borders.Item(orientation).set({
             LineStyle: Enum.wdLineStyleSingle,
             LineWidth,
@@ -329,12 +354,11 @@ function addTable() {
     return !0;
 }
 function addFlowChart() {
-    let s = wps.ActiveDocument.Shapes,
+    const shp = doc().Shapes,
         config = { wh: [60, 40], position: { abs: [0, 0], rel: [0, 0] } };
-    s.AddTextbox(1, 0, 0, ...config.wh).TextFrame.TextRange.Text = '程序1';
-    s.AddTextbox(1, 0, 0, ...config.wh).TextFrame.TextRange.Text = '程序2';
-    s.AddTextbox(1, 0, 0, ...config.wh).TextFrame.TextRange.Text = '程序3';
-    wps.ShowDialog('cubxx.github.io/Game-Lib/', '', 1280, 720, true);
+    shp.AddTextbox(1, 0, 0, ...config.wh).TextFrame.TextRange.Text = '程序1';
+    shp.AddTextbox(1, 0, 0, ...config.wh).TextFrame.TextRange.Text = '程序2';
+    shp.AddTextbox(1, 0, 0, ...config.wh).TextFrame.TextRange.Text = '程序3';
     return !0;
 }
 // function createFrame() {
@@ -419,29 +443,30 @@ function addFlowChart() {
 //     // wps.ShowDialog('file:///' + path, path); //查看文件内容
 //     return !0
 // }
-function formatSyntaxParser() {
+function syntaxParser() {
     const identifier_fns = {
         title(p) { p.Alignment = Enum.wdAlignParagraphCenter; p.Range.Font.set({ Size: 22, NameFarEast: '黑体', }); },
         author(p) { p.Alignment = Enum.wdAlignParagraphCenter; p.Range.Font.set({ Size: 14, NameFarEast: '仿宋', }); },
+        address(p) { },
         abstract(p) { p.Range.InsertBefore('摘要  '); p.Range.Font.set({ Size: 10.5, }); p.Range.Words.Item(1).Font.set({ NameFarEast: '黑体', }); },
         keywords(p) { p.Range.InsertBefore('关键词  '); p.Range.Font.set({ Size: 10.5, }); p.Range.Words.Item(1).Font.set({ NameFarEast: '黑体', }); },
         h(p) { p.Style = '标题 1'; p.Range.Font.set({ Size: 14, }); },
         hh(p) { p.Style = '标题 2'; p.Range.Font.set({ Size: 10.5, NameFarEast: '黑体', }); },
         hhh(p) { p.Style = '标题 3'; p.Range.Font.set({ Size: 10.5, NameFarEast: '黑体', }); },
         hhhh(p) { p.Style = '标题 4'; },
-        p(p) { p.Style = '正文'; p.Range.Font.set({ Size: 10.5, }); symbolPaser(p.Range); },
+        p(p) { p.Style = '正文'; p.Range.Font.set({ Size: 10.5, }); p.set({ CharacterUnitFirstLineIndent: 2, }); operatorParser(p.Range); },
         link(p) { },
         table(p) { p.Range.Font.set({ Size: 9, }); },
         figure(p) { p.Range.Font.set({ Size: 7.5, }); },
-        cites(p) { p.Range.Font.set({ Size: 9, }); },
+        cite(p) { p.Range.Font.set({ Size: 9, }); },
     };
-    const symbol_convert = [
+    const special_symbols = [
         ['alpha', 'α'],
         ['beta', 'β'],
         ['chi', 'χ'],
         ['eta', 'η'],
     ];
-    const symbol_fns = {
+    const operator_fns = {
         '\\'(range) { range.Font.Italic = !0; },
         '_'(range) { range.Font.Subscript = !0; },
         '^'(range) { range.Font.Superscript = !0; },
@@ -458,16 +483,16 @@ function formatSyntaxParser() {
             identifier_fns['p'](p);
         }
     }
-    const symbolPaser = function () {
-        const symbols = Object.keys(symbol_fns);
+    const operatorParser = function () {
+        const operators = Object.keys(operator_fns);
         function set(collection) {
             collection_operator(collection).map((e, i, arr) => {
-                if (symbols.some(s => e.Text === s)) {
-                    symbol_fns[e.Text](arr.Item(i + 1));
+                if (operators.some(s => e.Text === s)) {
+                    operator_fns[e.Text](arr.Item(i + 1));
                     e.Text = '';
                     return;
                 }
-                if (symbols.some(s => e.Text.includes(s))) {
+                if (operators.some(s => e.Text.includes(s))) {
                     set(e.Words);
                 }
             });
@@ -477,7 +502,7 @@ function formatSyntaxParser() {
         }
     }();
     function main() {
-        symbol_convert.map(([a, b]) => {
+        special_symbols.map(([a, b]) => {
             sel().Range.Find.Execute('\\' + a, true, true, false, false, false, true, Enum.wdFindContinue, false, b, Enum.wdReplaceAll);
         });
         const paragraphs_operator = collection_operator(sel().Paragraphs);
@@ -508,3 +533,81 @@ function showHelp(control) {
 function test() {
     return !0;
 }
+
+const UI = function (ui) {
+    [
+        'Enabled',
+        'Label',
+        'Screentip',
+        'Supertip',
+    ].forEach(prop => {
+        ui['get' + prop] = function ({ Id }) {
+            const value = ui.controls[Id]?.[prop] ?? '';
+            return typeof value == 'function' ? value() : value;
+        };
+    });
+    return ui;
+}({
+    controls: {
+        r1: {
+            Enabled: true,
+            Label: '检查索引',
+            Screentip: '检查参考文献是否按APA格式进行索引',
+            Supertip: '请先选中参考文献',
+        },
+        r2: {
+            Enabled: true,
+            Label: '核对索引',
+            Screentip: '核对正文索引和参考文献列表是否一一对应',
+            Supertip: '请先选中正文',
+        },
+        w1: {
+            Enabled: true,
+            Label: '撰写结果',
+            Screentip: '通过输入统计数据自动生成结果部分',
+            Supertip: '单击打开网页程序',
+        },
+        w2: {
+            Enabled: true,
+            Label: '创建文链',
+            Screentip: '创建文本链接',
+            Supertip: '请先选中文本',
+        },
+        w3: {
+            Enabled: true,
+            Label: '插入文链',
+            Screentip: '插入文本链接',
+            Supertip: '将之前创建的文链插入光标处',
+        },
+        c1: {
+            Enabled: true,
+            Label: '作图',
+            Screentip: '',
+            Supertip: '',
+        },
+        c2: {
+            Enabled: true,
+            Label: '作表',
+            Screentip: '以三线表格式粘贴表格',
+            Supertip: '请先复制表格',
+        },
+        c3: {
+            Enabled: true,
+            Label: '流程图',
+            Screentip: '',
+            Supertip: '',
+        },
+        o1: {
+            Enabled: true,
+            Label: '格式解析',
+            Screentip: '对格式文本进行解析',
+            Supertip: '请先选中需要解析的文本',
+        },
+        o2: {
+            Enabled: true,
+            Label: '帮助',
+            Screentip: '',
+            Supertip: '',
+        },
+    },
+});
