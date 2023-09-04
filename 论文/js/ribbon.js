@@ -440,6 +440,9 @@ function syntaxParser() {
     const paragraphs_operator = collection_operator(sel().Paragraphs).set({
         parse() {
             this.paragraph_info_objs = this.map((p, index) => {
+                if (p.Range.Text.length === 1) {
+                    return {};
+                }
                 const matchRes = p.Range.Text.match(/^\\([a-z]+) /);
                 if (matchRes) {
                     p.Range.Text = matchRes.input.replace(matchRes[0], '');
@@ -483,33 +486,39 @@ function syntaxParser() {
         ['chi', 'χ'],
         ['eta', 'η'],
     ];
-    const operator_parser = function () {
+    function operator_parser(range) {
         const operators = Object.keys(operator_fns);
-        function set(collection) {
-            collection_operator(collection).map((e, i, arr) => {
-                if (e.Text === '\r') {
+        function is_useless(e) {
+            return e.Text.length === 1 && '\r\v '.includes(e.Text);
+        }
+        progressive_search(range, 'Sentences', (e, i, arr) => {
+            if (is_useless(e)) {
+                return;
+            }
+            if (operators.some(operator => e.Text === operator)) {
+                // e: 操作符
+                const next_e = arr.Item(i + 1);
+                if (is_useless(next_e)) {
                     return;
                 }
-                if (operators.some(operator => e.Text === operator)) {
-                    const previous_e = arr.Item(i - 1);
-                    if (operators.some(operator => previous_e?.Text === '\\')) { // 被转义
-                        // previous_e.Text = '\\';
-                        return;
-                    }
-                    const next_e = arr.Item(i + 1);
+                const previous_e = arr.Item(i - 1);
+                if (previous_e?.Text === '\\') {
+                    return;
+                }
+                if (e.Text === '\\' && operators.some(operator => next_e.Text[0] === operator)) {
+                    // e: 转义符
+                } else {
                     operator_fns[e.Text](next_e);
-                    e.Text = '';
-                    return;
                 }
-                if (operators.some(operator => e.Text.includes(operator))) {
-                    set(e.Words);
-                }
-            });
-        }
-        return function (range) {
-            set(range.Sentences);
-        }
-    }();
+                e.Text = '';
+                return;
+            }
+            if (operators.some(operator => e.Text.includes(operator))) {
+                // e: 含有操作符的句子/单词
+                return true;
+            }
+        });
+    }
     function main() {
         sel().ClearFormatting();
         if (paragraphs_operator.at(-1).Range.Text.length !== 1) {

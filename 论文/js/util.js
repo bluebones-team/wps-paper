@@ -138,3 +138,18 @@ function replaceAll(Range, oldTexts, newTexts) {
         Range.Find.Execute(oldTexts[i], true, true, false, false, false, true, Enum.wdFindContinue, false, newTexts[i], Enum.wdReplaceAll);
     });
 }
+/**
+ * 递进查找
+ * @param {'Paragraphs'|'Sentences'|'Words'|'Characters'} name 集合对象名
+ * @param {(e,i,arr) => boolean} fn
+ */
+function progressive_search(range, name, fn) {
+    const names = ['Paragraphs', 'Sentences', 'Words', 'Characters'];
+    !function recur(collection, recur_num) {
+        collection_operator(collection).map((e, i, arr) => {
+            if (fn(e, i, arr)) {
+                recur(e[names[recur_num + 1]], recur_num + 1);
+            }
+        });
+    }(range[name], names.indexOf(name));
+}
