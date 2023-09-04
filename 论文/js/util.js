@@ -5,7 +5,6 @@ const $ = {
     version: 'v23.9-alpha.2',
     refer_cites: [],
     comments: [],
-    bookmarks: collection_operator(doc().Bookmarks),
 };
 /**
  * 同时修改多个属性
@@ -64,15 +63,18 @@ function set_font_format(Font, config = {}) {
         NameFarEast: "宋体",
     }, config);
 }
-function set_paragraph_format(Paragraph, config = {}) {
-    Paragraph.Reset();
-    Paragraph.Space15(); //1.5倍行距
-    Paragraph.set({
-        SpaceAfter: 0, //段后间距
-        SpaceBefore: 0,
+function set_paragraph_format(Paragraphs, config = {}) {
+    Paragraphs.set({
         CharacterUnitLeftIndent: 0, //左缩进量
         CharacterUnitRightIndent: 0,
         CharacterUnitFirstLineIndent: 0, //首行缩进
+        SpaceAfter: 0, //段后间距
+        SpaceBefore: 0,
+        LineUnitAfter: 0, //段后间距（网格线）
+        LineUnitBefore: 0,
+        LineSpacingRule: Enum.wdLineSpace1pt5, //1.5倍行距
+        AutoAdjustRightIndent: false, //不自动调整右缩进
+        DisableLineHeightGrid: true, //不与网格线对齐
     }, config);
 }
 function add_bookmark(range, name = `_link_${+new Date()}`) {
@@ -122,4 +124,17 @@ function collection_operator(collection) {
             return arr;
         },
     };
+}
+/**
+ * 批量替换文本
+ * @param {Iterable<string>} oldTexts 
+ * @param {Iterable<string>} newTexts 
+ */
+function replaceAll(Range, oldTexts, newTexts) {
+    if (oldTexts.length != newTexts.length) {
+        throw '查找数组和替换数组的长度不匹配';
+    }
+    oldTexts.map((e, i) => {
+        Range.Find.Execute(oldTexts[i], true, true, false, false, false, true, Enum.wdFindContinue, false, newTexts[i], Enum.wdReplaceAll);
+    });
 }

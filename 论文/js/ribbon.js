@@ -36,7 +36,7 @@ function checkCiteFormat(control) {
                     else return add_space(e.Words);
                 }
                 isStop || [...chr_spac].forEach(c =>
-                    text = text.replace(new RegExp(`[ ]*\\${c}[ ]*`, 'g'), c == '&' ? ' & ' : c + ' ')
+                    text = text.replace(new RegExp(` *\\${c} *`, 'g'), c == '&' ? ' & ' : c + ' ')
                 );
                 return text;
             }, 1).join('');
@@ -87,8 +87,6 @@ function checkCiteFormat(control) {
             if (/ ?\d+, ?/.test(pass_string.slice(-3))) break;
             word.Italic = !0;
         }
-        //段落格式
-        set_paragraph_format(p, { CharacterUnitFirstLineIndent: -2 });
     }
     function cutParagraph(p) {
         const sentences_operator = collection_operator(p.Range.Sentences);
@@ -127,13 +125,12 @@ function checkCiteFormat(control) {
         //删除过多换行
         sel().Text = sel().Text.replace(/\r{2,}/g, '\r');
         //纠正符号
-        for (let c = 0; c < chr_swap[0].length; c++) {
-            sel().Text = sel().Text.replaceAll(chr_swap[0][c], chr_swap[1][c])
-        }
+        replaceAll(sel().Range, ...chr_swap);
         //删除高亮
         sel().Range.HighlightColorIndex = 0;
-        //整体字体格式
+        //格式
         set_font_format(sel().Font, { Size: 9 });
+        set_paragraph_format(paragraphs_operator.obj, { CharacterUnitFirstLineIndent: -2 });
         //遍历每段
         paragraphs_operator.map(p => {
             if (p.Range.Text.length == 1) { //跳过空行
@@ -185,15 +182,10 @@ function checkCiteFormat(control) {
 }
 function matchCites() {
     del_comment(sel().Range);
-    //主程序
+    replaceAll(sel().Range, '（）', '()');
     const text = sel().Text;
     const reg_mt = /[^a-zA-Z\u4e00-\u9fa5\(\)]+[a-zA-Z\u4e00-\u9fa5]+(等人)?\(\d{4}\)/g, //。abc等人(2333)
         reg_gt = /\([^\(\)]+\d{4}\)/g; //(abc et al., 2333)
-    //判断是否有错误字符
-    if ([...'（）'].some(e => text.includes(e))) {
-        alert('请不要使用中文括号');
-        return !0;
-    }
     //提取正文索引
     const main_cites = [ //使用正则从正文提取字符串速度快，所以不采用逐步分析range的方式
         ...text.matchAll(reg_mt),
@@ -241,10 +233,11 @@ function writeResult() {
 }
 const { createLink, insertLink } = function () {
     let uncited_bookmark_name = '';
+    const bookmarks = collection_operator(doc().Bookmarks);
     return {
         createLink() {
             // 删除之前没被引用的书签
-            const last_bookmark = $.bookmarks.at(-1);
+            const last_bookmark = bookmarks.at(-1);
             if (uncited_bookmark_name === last_bookmark?.Name) {
                 last_bookmark.Delete();
             }
@@ -257,7 +250,7 @@ const { createLink, insertLink } = function () {
             return !0;
         },
         insertLink() {
-            const bookmark = $.bookmarks.at(-1);
+            const bookmark = bookmarks.at(-1);
             if (bookmark) {
                 cite_bookmark(bookmark);
                 uncited_bookmark_name = '';
@@ -285,7 +278,7 @@ function addFigure() {
     ps.Add();
     ps.Add();
     set_font_format(sel().Font);
-    collection_operator(sel().Paragraphs).map(set_paragraph_format);
+    set_paragraph_format(sel().Paragraphs);
     //图注
     ps.Item(2).Range.Text = '注：±1个标准误\r';
     ps.Item(2).Range.Paragraphs.Alignment = Enum.wdAlignParagraphLeft;
@@ -305,7 +298,7 @@ function addTable() {
     ps.Add();
     ps.Add();
     set_font_format(sel().Font);
-    collection_operator(sel().Paragraphs).map(set_paragraph_format);
+    set_paragraph_format(sel().Paragraphs);
     //表题
     ps.Item(1).Range.Text = `表${doc().Tables.Count + 1}\t标题\r`;
     ps.Item(1).Range.Font.Name = '黑体';
@@ -444,21 +437,45 @@ function addFlowChart() {
 //     return !0
 // }
 function syntaxParser() {
+    const paragraphs_operator = collection_operator(sel().Paragraphs).set({
+        parse() {
+            this.paragraph_info_objs = this.map((p, index) => {
+                const matchRes = p.Range.Text.match(/^\\([a-z]+) /);
+                if (matchRes) {
+                    p.Range.Text = matchRes.input.replace(matchRes[0], '');
+                }
+                return {
+                    index,
+                    identifier: matchRes?.[1] ?? 'p',
+                };
+            });
+        },
+        apply(fns) {
+            this.paragraph_info_objs.map(({ index, identifier }) => {
+                fns[identifier]?.(this.at(index - 1));
+            });
+        },
+    });
     const identifier_fns = {
         title(p) { p.Alignment = Enum.wdAlignParagraphCenter; p.Range.Font.set({ Size: 22, NameFarEast: '黑体', }); },
         author(p) { p.Alignment = Enum.wdAlignParagraphCenter; p.Range.Font.set({ Size: 14, NameFarEast: '仿宋', }); },
         address(p) { },
         abstract(p) { p.Range.InsertBefore('摘要  '); p.Range.Font.set({ Size: 10.5, }); p.Range.Words.Item(1).Font.set({ NameFarEast: '黑体', }); },
         keywords(p) { p.Range.InsertBefore('关键词  '); p.Range.Font.set({ Size: 10.5, }); p.Range.Words.Item(1).Font.set({ NameFarEast: '黑体', }); },
-        h(p) { p.Style = '标题 1'; p.Range.Font.set({ Size: 14, }); },
-        hh(p) { p.Style = '标题 2'; p.Range.Font.set({ Size: 10.5, NameFarEast: '黑体', }); },
-        hhh(p) { p.Style = '标题 3'; p.Range.Font.set({ Size: 10.5, NameFarEast: '黑体', }); },
-        hhhh(p) { p.Style = '标题 4'; },
-        p(p) { p.Style = '正文'; p.Range.Font.set({ Size: 10.5, }); p.set({ CharacterUnitFirstLineIndent: 2, }); operatorParser(p.Range); },
+        h(p) { p.Range.Font.set({ Size: 14, }); },
+        hh(p) { p.Range.Font.set({ Size: 10.5, NameFarEast: '黑体', }); },
+        hhh(p) { p.Range.Font.set({ Size: 10.5, NameFarEast: '黑体', }); },
+        hhhh(p) { },
+        p(p) { p.Range.Font.set({ Size: 10.5, }); p.set({ CharacterUnitFirstLineIndent: 2, }); operator_parser(p.Range); },
         link(p) { },
         table(p) { p.Range.Font.set({ Size: 9, }); },
         figure(p) { p.Range.Font.set({ Size: 7.5, }); },
         cite(p) { p.Range.Font.set({ Size: 9, }); },
+    };
+    const operator_fns = {
+        '\\'(range) { range.Font.Italic = !0; },
+        '_'(range) { range.Font.Subscript = !0; },
+        '^'(range) { range.Font.Superscript = !0; },
     };
     const special_symbols = [
         ['alpha', 'α'],
@@ -466,33 +483,25 @@ function syntaxParser() {
         ['chi', 'χ'],
         ['eta', 'η'],
     ];
-    const operator_fns = {
-        '\\'(range) { range.Font.Italic = !0; },
-        '_'(range) { range.Font.Subscript = !0; },
-        '^'(range) { range.Font.Superscript = !0; },
-    };
-    function identify(p) {
-        const matchRes = p.Range.Text.match(/^\\([a-z]+) /);
-        if (matchRes) {
-            const fn = identifier_fns[matchRes[1]];
-            if (fn) {
-                p.Range.Text = matchRes.input.replace(matchRes[0], '');
-                fn(p);
-            }
-        } else {
-            identifier_fns['p'](p);
-        }
-    }
-    const operatorParser = function () {
+    const operator_parser = function () {
         const operators = Object.keys(operator_fns);
         function set(collection) {
             collection_operator(collection).map((e, i, arr) => {
-                if (operators.some(s => e.Text === s)) {
-                    operator_fns[e.Text](arr.Item(i + 1));
+                if (e.Text === '\r') {
+                    return;
+                }
+                if (operators.some(operator => e.Text === operator)) {
+                    const previous_e = arr.Item(i - 1);
+                    if (operators.some(operator => previous_e?.Text === '\\')) { // 被转义
+                        // previous_e.Text = '\\';
+                        return;
+                    }
+                    const next_e = arr.Item(i + 1);
+                    operator_fns[e.Text](next_e);
                     e.Text = '';
                     return;
                 }
-                if (operators.some(s => e.Text.includes(s))) {
+                if (operators.some(operator => e.Text.includes(operator))) {
                     set(e.Words);
                 }
             });
@@ -502,18 +511,31 @@ function syntaxParser() {
         }
     }();
     function main() {
-        special_symbols.map(([a, b]) => {
-            sel().Range.Find.Execute('\\' + a, true, true, false, false, false, true, Enum.wdFindContinue, false, b, Enum.wdReplaceAll);
-        });
-        const paragraphs_operator = collection_operator(sel().Paragraphs);
-        if (paragraphs_operator.at(-1).Range.Text.length == 1) {
-            sel().ClearFormatting();
-            set_font_format(sel().Font);
-            paragraphs_operator.map(set_paragraph_format);
-            paragraphs_operator.map(identify, 1);
-        } else {
+        sel().ClearFormatting();
+        if (paragraphs_operator.at(-1).Range.Text.length !== 1) {
             alert('选中文本的最后一行应为空行');
+            return !0;
         }
+        // 替换特殊符号
+        replaceAll(sel().Range, ...Object.keys(special_symbols[0]).map(col =>
+            special_symbols.map(row =>
+                (!!+col ? '' : '\\') + row[col]
+            )
+        ));
+        // 构建list
+        paragraphs_operator.parse();
+        paragraphs_operator.apply({
+            h(p) { p.Style = '标题 1'; },
+            hh(p) { p.Style = '标题 2'; },
+            hhh(p) { p.Style = '标题 3'; },
+            hhhh(p) { p.Style = '标题 4'; },
+            p(p) { p.Style = '正文'; },
+        });
+        doc().Lists.Item(1)?.ApplyListTemplate(wps.ListGalleries.Item(3).ListTemplates.Item(7)); //多级编号
+        // 识别标识符
+        set_font_format(sel().Font);
+        set_paragraph_format(sel().Paragraphs);
+        paragraphs_operator.apply(identifier_fns);
     }
     main();
     return !0;
