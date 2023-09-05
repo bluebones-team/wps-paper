@@ -74,6 +74,7 @@
 
         code {
             color: red;
+            font-weight: bold;
         }
 
         table {
@@ -101,34 +102,33 @@
     <div id="content"></div>
     <script>
         const content = document.querySelector('#content');
-        const info = Object.assign(content, {
-            add(text, tag) {
-                if (tag) text = `<${tag}>${text}</${tag}>`;
-                info.innerHTML += `<br>${text}`;
+        const info = {
+            add(text, link) {
+                if (link) {
+                    text = `<a onclick="open_url_in_local('${link}')">${text}</a>`
+                }
+                content.innerHTML += '<br>' + text;
             },
             err(msg, line = '') {
-                info.innerHTML += `<br><i style='color:red;'>${line}&emsp;${msg}<i>`;
+                content.innerHTML += '<br>' + `<i style='color:red;'>${line}&emsp;${msg.replaceAll('\n', '<br>')}</i>`;
             },
-        });
+        };
         window.addEventListener('dblclick', () => location.reload());
         window.addEventListener('error', ({ message, lineno }) => info.err(message, lineno));
-        window.addEventListener('unhandledrejection', ({ reason }) => {
-            info.err(reason + '', reason.stack.split(':').reverse()[1]);
-        });
+        window.addEventListener('unhandledrejection', ({ reason }) => info.err(reason.stack));
         function addScript(src) {
-            const libName = src.split('/').at(-1);
-            info.add(`正在加载&emsp;${libName}...`);
+            info.add('正在加载');
+            info.add(src, src);
             return new Promise((resolve, reject) => {
                 const elm = Object.assign(document.createElement('script'), {
                     src: src,
                     type: "text/javascript",
                     onload: function () {
-                        info.add(`${libName}&emsp;加载成功`);
+                        info.add('加载成功');
                         resolve();
                     },
                     onerror: function () {
-                        info.err(`${libName}&emsp;加载失败`);
-                        info.add(`<a href=${src}>${src}</a>`, 'cite');
+                        info.err('加载失败');
                         reject();
                     }
                 });
@@ -144,13 +144,13 @@
                     });
                 } else {
                     info.err(`获取文件失败&emsp;${res.status}`);
-                    info.add(res.url, 'cite');
-                    info.add('请查看<a onclick="open_url_in_local(help.deploy)">最新版文档</a>', 'h2');
+                    info.add(res.url, res.url);
+                    info.add('请查看最新版文档', help.deploy);
                 }
             }, err => {
-                info.err(err.stack); // TypeError: Failed to fetch ...                
-                info.add(res.url, 'cite');
-                info.add('请查看<a onclick="open_url_in_local(help.deploy)">最新版文档</a>', 'h2');
+                info.err(err.stack); // TypeError: Failed to fetch ...         
+                info.add(res.url, res.url);
+                info.add('请查看最新版文档', help.deploy);
             });
         }
         function parseMD(text) {
@@ -159,7 +159,7 @@
             ]).then(() => {
                 content.innerHTML = marked.parse(text);
             }, () => {
-                info.add('资源请求错误<br>请联系作者', 'h2');
+                info.add('资源请求错误<br>请联系作者');
             });
         }
         fetchFile(help.local);
