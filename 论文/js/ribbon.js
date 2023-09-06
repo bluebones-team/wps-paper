@@ -125,7 +125,7 @@ function checkCiteFormat(control) {
         //删除过多换行
         sel().Text = sel().Text.replace(/\r{2,}/g, '\r');
         //纠正符号
-        replaceAll(sel().Range, ...chr_swap);
+        replaceAll(...chr_swap);
         //删除高亮
         sel().Range.HighlightColorIndex = 0;
         //格式
@@ -182,7 +182,7 @@ function checkCiteFormat(control) {
 }
 function matchCites() {
     del_comment(sel().Range);
-    replaceAll(sel().Range, '（）', '()');
+    replaceAll('（）', '()');
     const text = sel().Text;
     const reg_mt = /[^a-zA-Z\u4e00-\u9fa5\(\)]+[a-zA-Z\u4e00-\u9fa5]+(等人)?\(\d{4}\)/g, //。abc等人(2333)
         reg_gt = /\([^\(\)]+\d{4}\)/g; //(abc et al., 2333)
@@ -233,11 +233,13 @@ function writeResult() {
 }
 const { createLink, insertLink } = function () {
     let uncited_bookmark_name = '';
-    const bookmarks = collection_operator(doc().Bookmarks);
+    function get_last_bookmark() {
+        return collection_operator(doc().Bookmarks).at(-1);
+    }
     return {
         createLink() {
             // 删除之前没被引用的书签
-            const last_bookmark = bookmarks.at(-1);
+            const last_bookmark = get_last_bookmark();
             if (uncited_bookmark_name === last_bookmark?.Name) {
                 last_bookmark.Delete();
             }
@@ -250,7 +252,7 @@ const { createLink, insertLink } = function () {
             return !0;
         },
         insertLink() {
-            const bookmark = bookmarks.at(-1);
+            const bookmark = get_last_bookmark();
             if (bookmark) {
                 cite_bookmark(bookmark);
                 uncited_bookmark_name = '';
@@ -526,7 +528,7 @@ function syntaxParser() {
             return !0;
         }
         // 替换特殊符号
-        replaceAll(sel().Range, ...Object.keys(special_symbols[0]).map(col =>
+        replaceAll(...Object.keys(special_symbols[0]).map(col =>
             special_symbols.map(row =>
                 (!!+col ? '' : '\\') + row[col]
             )

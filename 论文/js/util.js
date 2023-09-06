@@ -131,7 +131,7 @@ function collection_operator(collection) {
  * @param {Iterable<string>} oldTexts 
  * @param {Iterable<string>} newTexts 
  */
-function replaceAll(Range, oldTexts, newTexts) {
+function replaceAll(oldTexts, newTexts, Range = sel().Range) {
     if (oldTexts.length != newTexts.length) {
         throw '查找数组和替换数组的长度不匹配';
     }
