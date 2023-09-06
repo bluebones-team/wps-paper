@@ -61,6 +61,7 @@ function set_font_format(Font, config = {}) {
         Name: '',
         NameAscii: "Times New Roman",
         NameFarEast: "宋体",
+        NameOther: "Times New Roman",
     }, config);
 }
 function set_paragraph_format(Paragraphs, config = {}) {
@@ -134,9 +135,9 @@ function replaceAll(Range, oldTexts, newTexts) {
     if (oldTexts.length != newTexts.length) {
         throw '查找数组和替换数组的长度不匹配';
     }
-    oldTexts.map((e, i) => {
+    for (let i = 0; i < oldTexts.length; i++) {
         Range.Find.Execute(oldTexts[i], true, true, false, false, false, true, Enum.wdFindContinue, false, newTexts[i], Enum.wdReplaceAll);
-    });
+    }
 }
 /**
  * 递进查找

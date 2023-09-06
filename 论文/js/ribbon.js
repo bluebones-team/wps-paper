@@ -485,6 +485,7 @@ function syntaxParser() {
         ['beta', 'β'],
         ['chi', 'χ'],
         ['eta', 'η'],
+        ['times', '×'],
     ];
     function operator_parser(range) {
         const operators = Object.keys(operator_fns);
@@ -520,7 +521,6 @@ function syntaxParser() {
         });
     }
     function main() {
-        sel().ClearFormatting();
         if (paragraphs_operator.at(-1).Range.Text.length !== 1) {
             alert('选中文本的最后一行应为空行');
             return !0;
@@ -532,6 +532,8 @@ function syntaxParser() {
             )
         ));
         // 构建list
+        sel().ClearFormatting();
+        const list_num = doc().Lists.Count;
         paragraphs_operator.parse();
         paragraphs_operator.apply({
             h(p) { p.Style = '标题 1'; },
@@ -540,7 +542,10 @@ function syntaxParser() {
             hhhh(p) { p.Style = '标题 4'; },
             p(p) { p.Style = '正文'; },
         });
-        doc().Lists.Item(1)?.ApplyListTemplate(wps.ListGalleries.Item(3).ListTemplates.Item(7)); //多级编号
+        if (doc().Lists.Count === list_num + 1) { //构建成功
+            const list = doc().Lists.Item(list_num + 1);
+            list?.ApplyListTemplate(wps.ListGalleries.Item(3).ListTemplates.Item(7)); //多级编号
+        }
         // 识别标识符
         set_font_format(sel().Font);
         set_paragraph_format(sel().Paragraphs);
