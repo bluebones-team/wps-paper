@@ -2,7 +2,7 @@ const sel = () => wps.Selection;
 const doc = () => wps.ActiveDocument;
 const Enum = wps.Enum;
 const $ = {
-    version: 'v23.9-alpha.3',
+    version: 'v23.9-alpha.4',
     refer_cites: [],
     comments: [],
 };
