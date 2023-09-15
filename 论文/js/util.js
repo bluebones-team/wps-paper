@@ -3,154 +3,141 @@ const doc = () => wps.ActiveDocument;
 const Enum = wps.Enum;
 const $ = {
     version: 'v23.9-alpha.4',
-    refer_cites: [],
-    comments: [],
+    rbCite_pairs: new Map(),
+    comment_Author: '＞︿＜',
 };
+const UI = function (ui) {
+    [
+        'Enabled',
+        'Label',
+        'Screentip',
+        'Supertip',
+    ].forEach(prop => {
+        ui['get' + prop] = function ({ Id }) {
+            const value = ui.controls[Id]?.[prop] ?? '';
+            return typeof value == 'function' ? value() : value;
+        };
+    });
+    return ui;
+}({
+    controls: {
+        r1: {
+            Enabled: true,
+            Label: '检查索引',
+            Screentip: '检查参考文献是否按APA格式进行索引',
+            Supertip: '请先选中参考文献',
+        },
+        r2: {
+            Enabled: true,
+            Label: '核对索引',
+            Screentip: '核对正文索引和参考文献列表是否一一对应',
+            Supertip: '请先选中正文',
+        },
+        w1: {
+            Enabled: true,
+            Label: '撰写结果',
+            Screentip: '通过输入统计数据自动生成结果部分',
+            Supertip: '单击打开网页程序',
+        },
+        w2: {
+            Enabled: true,
+            Label: '创建文链',
+            Screentip: '创建文本链接',
+            Supertip: '请先选中文本',
+        },
+        w3: {
+            Enabled: true,
+            Label: '插入文链',
+            Screentip: '插入文本链接',
+            Supertip: '将之前创建的文链插入光标处',
+        },
+        c1: {
+            Enabled: true,
+            Label: '作图',
+            Screentip: '',
+            Supertip: '',
+        },
+        c2: {
+            Enabled: true,
+            Label: '作表',
+            Screentip: '以三线表格式粘贴表格',
+            Supertip: '请先复制表格',
+        },
+        c3: {
+            Enabled: true,
+            Label: '流程图',
+            Screentip: '',
+            Supertip: '',
+        },
+        o1: {
+            Enabled: true,
+            Label: '格式解析',
+            Screentip: '对格式文本进行解析',
+            Supertip: '请先选中需要解析的文本',
+        },
+        o2: {
+            Enabled: true,
+            Label: '帮助',
+            Screentip: '',
+            Supertip: '',
+        },
+        o3: {
+            Enabled: true,
+            Label: '更新',
+            Screentip: '当前版本',
+            Supertip: $.version,
+        },
+    },
+});
 /**
  * 同时修改多个属性
  */
 Object.prototype.set = function (...configs) {
     return Object.assign(this, ...configs);
 };
-/**
- * 数组去重，包括对象数组
- */
-Array.prototype.deduplication = function () {
-    let arr = this.map(e => JSON.stringify(e));
-    arr = [...new Set(arr)]; //去重
-    return arr.map(e => JSON.parse(e));
-}
-/**
- * 添加撤销组
- */
-Function.prototype.step = function (note) {
-    note ??= this.name;
-    return (...args) => {
-        wps.UndoRecord.StartCustomRecord(`JSA-${note}`);
+Function.prototype.set({
+    /**
+     * 添加撤销组
+     */
+    step(...args) {
+        wps.UndoRecord.StartCustomRecord('JSA-' + this.name);
         try {
             this(...args);
-        } catch (err) {
-            alert(err + '');
-            console.error(err);
+        } catch (e) {
+            new Range_decorator(sel().Range).add_comment('意料外的错误\v请撤销刚刚的操作\v' + e);
+            console.error(e);
         }
         wps.UndoRecord.EndCustomRecord();
         return !0
-    }
-};
+    },
+    /**
+     * 执行计时
+     */
+    timed(...args) {
+        const st = +new Date();
+        this(...args);
+        return +new Date() - st;
+    },
+});
 function open_url_in_local(url) {
     wps.OAAssist.ShellExecute(url);
 }
 function open_url_in_wps(url, caption, width, height) {
     wps.ShowDialog(url, caption, width, height, true);
 }
-function del_comment(range) {
-    collection_operator(range.Comments).map(e => $.comments.includes(e) && e.Delete());
-}
-function add_comment(range, content) {
-    del_comment(range);
-    const comment = range.Comments.Add(range, content);
-    comment.Author = '*Output';
-    $.comments.push(comment);
-}
-function set_font_format(Font, config = {}) {
-    Font.Reset();
-    Font.set({
-        Bold: !1,
-        Italic: !1,
-        Color: 0,
-        Name: '',
-        NameAscii: "Times New Roman",
-        NameFarEast: "宋体",
-        NameOther: "Times New Roman",
-    }, config);
-}
-function set_paragraph_format(Paragraphs, config = {}) {
-    Paragraphs.set({
-        CharacterUnitLeftIndent: 0, //左缩进量
-        CharacterUnitRightIndent: 0,
-        CharacterUnitFirstLineIndent: 0, //首行缩进
-        SpaceAfter: 0, //段后间距
-        SpaceBefore: 0,
-        LineUnitAfter: 0, //段后间距（网格线）
-        LineUnitBefore: 0,
-        LineSpacingRule: Enum.wdLineSpace1pt5, //1.5倍行距
-        AutoAdjustRightIndent: false, //不自动调整右缩进
-        DisableLineHeightGrid: true, //不与网格线对齐
-    }, config);
-}
-function add_bookmark(range, name = `_link_${+new Date()}`) {
-    return doc().Bookmarks.Add(name, range);
-}
-function cite_bookmark(bookmark, range = sel().Range) {
-    const field = doc().Fields.Add(range);
-    field.Code.Text = ` REF ${bookmark.Name} \\h `;
-    field.Update();
-}
-/**
- * 返回集合对象操作器
- */
-function collection_operator(collection) {
-    return {
-        obj: collection,
-        /**
-         * @param {boolean} order true：正序
-         */
-        map(fn, order) {
-            const len = collection.Count;
-            const arr = [];
-            for (let i = len; i > 0; i--) {
-                const index = order ? len - i + 1 : i;
-                arr[index - 1] = fn(collection.Item(index), index, collection);
-            }
-            return arr;
-        },
-        /**
-         * @param {number} index 0：第一个item
-         */
-        at(index) {
-            const len = collection.Count;
-            if (index >= 0 && index < len)
-                return collection.Item(index + 1);
-            if (index < 0 && index >= -len)
-                return collection.Item(len + index + 1);
-        },
-        /**
-         * 数组切片
-         */
-        slice(start = 0, end = collection.Count) {
-            const arr = [];
-            for (let i = start; i < end; i++) {
-                arr.push(collection.Item(i + 1));
-            }
-            return arr;
-        },
-    };
+function is_null_range(range) {
+    return range.Text.length === 1 && '\r\v '.includes(range.Text);
 }
 /**
  * 批量替换文本
  * @param {Iterable<string>} oldTexts 
  * @param {Iterable<string>} newTexts 
  */
-function replaceAll(oldTexts, newTexts, Range = sel().Range) {
+function replaceAll(oldTexts, newTexts, range = sel().Range) {
     if (oldTexts.length != newTexts.length) {
         throw '查找数组和替换数组的长度不匹配';
     }
     for (let i = 0; i < oldTexts.length; i++) {
-        Range.Find.Execute(oldTexts[i], true, true, false, false, false, true, Enum.wdFindContinue, false, newTexts[i], Enum.wdReplaceAll);
+        range.Find.Execute(oldTexts[i], true, true, false, false, false, true, Enum.wdFindContinue, false, newTexts[i], Enum.wdReplaceAll);
     }
-}
-/**
- * 递进查找
- * @param {'Paragraphs'|'Sentences'|'Words'|'Characters'} name 集合对象名
- * @param {(e,i,arr) => boolean} fn
- */
-function progressive_search(range, name, fn) {
-    const names = ['Paragraphs', 'Sentences', 'Words', 'Characters'];
-    !function recur(collection, recur_num) {
-        collection_operator(collection).map((e, i, arr) => {
-            if (fn(e, i, arr)) {
-                recur(e[names[recur_num + 1]], recur_num + 1);
-            }
-        });
-    }(range[name], names.indexOf(name));
 }

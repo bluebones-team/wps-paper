@@ -7,37 +7,53 @@ function onload(ribbonUI) {
     return !0;
 }
 function checkCiteFormat(control) {
+    //常量
+    const reg_cn_author = /(^\[?[\u4e00-\u9fa5]{2,4}(, [\u4e00-\u9fa5]{2,4}){0,5}(, (\.\.\. )?[\u4e00-\u9fa5]{2,4})?\. $)/,
+        reg_en_author = /(^[a-zA-Z\-\']+,( [A-Z]\.){1,3}(, [a-zA-Z\-\']+,( [A-Z]\.){1,3}){0,5}(, (\&|\.\.\.) [a-zA-Z\-\']+,( [A-Z]\.){1,3})? $)/,
+        reg_author = new RegExp('^(' + Reg2Str(reg_cn_author) + '|' + Reg2Str(reg_en_author) + ')'),
+        reg_date = /(\(\d{4}[a-z]?\)\. )/, //(1234b). /
+        reg_jo_title = /[^\(\)]*. /,
+        reg_th_title = /[^]*[a-zA-Z\u4e00-\u9fa5] \(((硕|博)士学位论文|Unpublished (master\'s thesis|doctorial dissertation))\). /,
+        reg_title = /([^]+[\.\?]|[^]+\? [^]+\.) /,
+        reg_jo_source = /([a-zA-Z\u4e00-\u9fa5,\-\&\:\(\)\' ]{2,}, \d+(\(\d+(\-\d+)?\))?, (Article )?[a-zA-Z]?\d+([\-\+][a-zA-Z]?\d+){0,2}\. \r*)/,
+        reg_th_source = /(^[a-zA-Z\u4e00-\u9fa5\' ]{4,}(, [a-zA-Z\u4e00-\u9fa5\' ]{2,}){0,3}\. \r*$)/,
+        reg_source = new RegExp('^(' + Reg2Str(reg_jo_source) + '|' + Reg2Str(reg_th_source) + ')\]?\\r*'),
+        link = /(^(https?|doi)\:\/\/[a-zA-Z\#\?\.\/]*\.\s*)?$/,
+        reg_cite = new RegExp(Reg2Str(reg_author, reg_date, reg_title, reg_source));
+    var p_range = new Range_decorator();
     //功能组
+    const hasLink = str => ['doi', 'http'].some(e => str.includes(e));
     function Reg2Str(...regs) {
         return regs.map(e =>
             typeof e == 'string' ? e : e.toString().slice(1, -1)
         ).join('');
     }
-    function RegExpTest(range, reg, isMark = true) {
+    function RegExpTest(range, reg, shouldMark = true) {
         if (range === null) return 1;
         const ranges = [range].flat();
         const res = reg.test(ranges.map(e => e.Text).join(''));
-        if (!isMark) return res;
+        if (!shouldMark) return res;
         if (res) {
             ranges.forEach(e => { e.Font.Color = 0 });
         } else {
             ranges.forEach(e => { e.Font.Color = 255 });
-            ranges[0] && error_ranges.push(ranges[0]);
         }
         return res;
     }
     function setParagraph(p) {
         //非法符号替换，规定符号后加空格、纠正符号组合
         function add_space(Words) { //查找句子 > 查找单词
-            return collection_operator(Words).map(e => {
+            return new Collection_decorator(Words).map(e => {
                 let text = e.Text;
                 if (hasLink(text)) {
                     if (e.Words.Count == 1) isStop = true;
                     else return add_space(e.Words);
                 }
-                isStop || [...chr_spac].forEach(c =>
-                    text = text.replace(new RegExp(` *\\${c} *`, 'g'), c == '&' ? ' & ' : c + ' ')
-                );
+                if (!isStop) {
+                    [...',.&:?…!'].forEach(c =>
+                        text = text.replace(new RegExp(` *\\${c} *`, 'g'), c == '&' ? ' & ' : c + ' ')
+                    );
+                }
                 return text;
             }, 1).join('');
         }
@@ -55,13 +71,12 @@ function checkCiteFormat(control) {
         if (!p_segments) {
             p.Range.Font.Bold = !0;
             p.Range.Font.Color = 255;
-            error_ranges.push(p.Range);
             return;
         }
-        $.refer_cites.push({
-            range: p.Range,
+        $.rbCite_pairs.set({
+            range: p_segments[1],
             segments: p_segments.map(e => [e].flat().map(e => e.Text).join('')),
-        });
+        }, null);
         const [authors, date, title, source] = p_segments;
         const isTh = /((硕|博)士学位论文|Unpublished (master\'s thesis|doctorial dissertation))/.test(p.Range.Text);
         RegExpTest(authors, reg_author);
@@ -89,140 +104,112 @@ function checkCiteFormat(control) {
         }
     }
     function cutParagraph(p) {
-        const sentences_operator = collection_operator(p.Range.Sentences);
-        let authors, date, title, source; //各成分
-        let last_marker = sentences_operator.obj.Count;
+        const sentences = new Collection_decorator(p.Range.Sentences);
+        let last_marker = sentences.obj.Count;
         if (last_marker < 4) {
-            add_comment(p.Range, '缺少成分');
+            p_range.add_comment('这是不完整的索引');
             return;
         }
-        //最后一句首词为 net_head ? link,so : so
-        if (hasLink(sentences_operator.at(-1).Words.Item(1).Text)) {
+        if (hasLink(sentences.at(-1).Words.Item(1).Text)) { //最后一句是否为网址
             last_marker--;
         }
-        source = sentences_operator.at(last_marker - 1);
-        //匹配日期 ? date : 标红加粗
+        let authors, date, title, source; //各成分
+        source = sentences.at(last_marker - 1);
         for (let i = 1; i < last_marker; i++) {
-            const date_range = sentences_operator.at(i - 1);
-            if (!RegExpTest(date_range, reg_date, false)) {
+            const date_range = sentences.at(i - 1);
+            if (!RegExpTest(date_range, reg_date, false)) { //匹配日期
                 continue;
             }
             date = date_range;
-            authors = sentences_operator.slice(0, i - 1);
-            title = sentences_operator.slice(i, last_marker - 1);
+            authors = sentences.slice(0, i - 1);
+            title = sentences.slice(i, last_marker - 1);
             break;
         }
         if (date) {
             return [authors, date, title, source]; //可能含有 []
         } else {
-            add_comment(p.Range, '无法获取日期');
+            p_range.add_comment('无法获取日期');
+            return;
         }
     }
-    const hasLink = str => ['doi', 'http'].some(e => str.includes(e));
     function main() {
-        error_ranges = [];
-        $.refer_cites = [];
-        //删除过多换行
-        sel().Text = sel().Text.replace(/\r{2,}/g, '\r');
-        //纠正符号
-        replaceAll(...chr_swap);
-        //删除高亮
-        sel().Range.HighlightColorIndex = 0;
-        //格式
-        set_font_format(sel().Font, { Size: 9 });
-        set_paragraph_format(paragraphs_operator.obj, { CharacterUnitFirstLineIndent: -2 });
-        //遍历每段
-        paragraphs_operator.map(p => {
-            if (p.Range.Text.length == 1) { //跳过空行
-                return;
-            }
-            try {
-                setParagraph(p);
-            } catch (e) {
-                p.Range.HighlightColorIndex = Enum.wdYellow;
-                alert('CheckIndexFormat p_format error');
-                console.error(p.Range.Text + '\n', e);
-            }
-        });
-        return !0;
+        const range = new Range_decorator(sel().Range);
+        const paragraphs = new Collection_decorator(sel().Paragraphs);
+        $.rbCite_pairs.clear();
+        sel().Text = sel().Text.replace(/\r{2,}/g, '\r'); //删除过多换行
+        replaceAll("（）【】，−－–：’？！ ．", "()[],---:'?! ."); //纠正符号
+        range.del_comment();
+        range.set_font_format({ Size: 9 });
+        range.set_paragraph_format({ CharacterUnitFirstLineIndent: -2 });
+        function loop() {
+            paragraphs.map(p => {
+                if (is_null_range(p.Range)) { //跳过空行
+                    return;
+                }
+                p_range = new Range_decorator(p.Range);
+                try {
+                    setParagraph(p);
+                } catch (e) {
+                    p.Range.HighlightColorIndex = Enum.wdYellow;
+                    p_range.add_comment('意料外的错误\v' + e);
+                    console.error(e);
+                }
+            });
+        }
+        console.log('每秒词数：' + sel().Words.Count * 1e3 / loop.timed());
+        alert('检查成功\n记录了' + $.rbCite_pairs.size + '条参考文献');
     }
-
-    //常量
-    const reg_cn_author = /(^\[?[\u4e00-\u9fa5]{2,4}(, [\u4e00-\u9fa5]{2,4}){0,5}(, (\.\.\. )?[\u4e00-\u9fa5]{2,4})?\. $)/,
-        reg_en_author = /(^[a-zA-Z\-\']+,( [A-Z]\.){1,3}(, [a-zA-Z\-\']+,( [A-Z]\.){1,3}){0,5}(, (\&|\.\.\.) [a-zA-Z\-\']+,( [A-Z]\.){1,3})? $)/,
-        reg_author = new RegExp('^(' + Reg2Str(reg_cn_author) + '|' + Reg2Str(reg_en_author) + ')'),
-        reg_date = /(\(\d{4}[a-z]?\)\. )/, //(1234b). /
-        reg_jo_title = /[^\(\)]*. /,
-        reg_th_title = /[^]*[a-zA-Z\u4e00-\u9fa5] \(((硕|博)士学位论文|Unpublished (master\'s thesis|doctorial dissertation))\). /,
-        reg_title = /([^]+[\.\?]|[^]+\? [^]+\.) /,
-        reg_jo_source = /([a-zA-Z\u4e00-\u9fa5,\-\&\:\(\)\' ]{2,}, \d+(\(\d+(\-\d+)?\))?, (Article )?[a-zA-Z]?\d+([\-\+][a-zA-Z]?\d+){0,2}\. \r*)/,
-        reg_th_source = /(^[a-zA-Z\u4e00-\u9fa5\' ]{4,}(, [a-zA-Z\u4e00-\u9fa5\' ]{2,}){0,3}\. \r*$)/,
-        reg_source = new RegExp('^(' + Reg2Str(reg_jo_source) + '|' + Reg2Str(reg_th_source) + ')\]?\\r*'),
-        link = /(^(https?|doi)\:\/\/[a-zA-Z\#\?\.\/]*\.\s*)?$/,
-        reg = new RegExp(Reg2Str(reg_author, reg_date, reg_title, reg_source));
-    const paragraphs_operator = collection_operator(sel().Paragraphs),
-        chr_swap = ["（）【】，−－–：’？！ ．", "()[],---:'?! ."],
-        chr_spac = ',.&:?…!';
-    let error_ranges = [],
-        timerRun = fn => {
-            const st = +new Date();
-            fn();
-            return +new Date() - st;
-        };
-
-    //主逻辑
-    del_comment(sel().Range);
-    if (paragraphs_operator.obj.Count != 1) { //不止选择一段
-        console.log('每秒词数：' + sel().Words.Count * 1e3 / timerRun(main));
-        alert('检查成功，' + error_ranges.length + '个疑似错误');
-    } else {
-        main();
-    }
+    main();
     return !0;
 }
 function matchCites() {
-    del_comment(sel().Range);
+    if ($.rbCite_pairs.size === 0) {
+        alert('还没有记录参考文献\n请先检查索引');
+        return;
+    }
+    const sel_range = new Range_decorator(sel().Range);
+    sel_range.del_comment();
     replaceAll('（）', '()');
     const text = sel().Text;
-    const reg_mt = /[^a-zA-Z\u4e00-\u9fa5\(\)]+[a-zA-Z\u4e00-\u9fa5]+(等人)?\(\d{4}\)/g, //。abc等人(2333)
-        reg_gt = /\([^\(\)]+\d{4}\)/g; //(abc et al., 2333)
+    const reg_mt = /[^a-zA-Z\u4e00-\u9fa5\(\)]{1}[a-zA-Z\u4e00-\u9fa5]+\(\d{4}[a-z]?\)/g, //。abc(2333a)
+        reg_gt = /\([^\(\)]+\d{4}[a-z]?\)/g; //(abc et al., 2333a)
     //提取正文索引
-    const main_cites = [ //使用正则从正文提取字符串速度快，所以不采用逐步分析range的方式
+    const body_cites = [ //使用正则从正文提取字符串速度快，所以不采用逐步分析range的方式
         ...text.matchAll(reg_mt),
         ...text.matchAll(reg_gt),
     ].flatMap(e =>
         e[0].split(';')
     );
-    console.log('正文索引:', main_cites)
-    console.log('参考文献:', $.refer_cites.map(({ segments }) => segments));
+    const refer_cites = [...$.rbCite_pairs.keys()];
+    console.log('正文索引', body_cites)
+    console.log('参考文献', refer_cites.map(({ segments }) => segments));
     //比较正文索引和参考文献
-    const ok_cites = new Set(),
-        ok_refer_cites = new Set(),
-        fail_main_cites = [];
-    main_cites.forEach(cite => { //遍历正文索引
-        let find_times = 0;
-        $.refer_cites.forEach(ref => { //遍历参考文献
-            const name = ref.segments[0].match(/^([^,\.]+)/)[1], //Dickman
-                date = ref.segments[1].match(/^\((\d{4}[a-z]?)\)/)[1]; //2020
-            if (cite.includes(name) && cite.includes(date)) {
-                ok_cites.add([name, date].join(', '));
-                ok_refer_cites.add(ref);
-                // ref.range.Font.ColorIndex = Enum.wdBlue;
-                find_times++;
+    const fail_body_cites = [];
+    loop_body: for (let cite of body_cites) {
+        loop_refer: for (let ref of refer_cites) {
+            if ($.rbCite_pairs.get(ref) !== null) { //跳过已匹配成功的ref
+                continue loop_refer;
             }
-        });
-        find_times || fail_main_cites.push(cite);
+            const name = ref.segments[0].match(/^([^,\.]+)/)[1], //Dickman
+                date = ref.segments[1].match(/^\((\d{4}[a-z]?)\)/)[1]; //2020a
+            const isOK = [name, date].every(e => cite.includes(e));
+            if (isOK) {
+                $.rbCite_pairs.set(ref, cite);
+                continue loop_body;
+            }
+        }
+        fail_body_cites.push(cite);
+    }
+    refer_cites.forEach(ref => {
+        $.rbCite_pairs.get(ref) || new Range_decorator(ref.range).add_comment('这是未被引用的参考文献');
     });
-    $.refer_cites.forEach(ref => {
-        ok_refer_cites.has(ref) || add_comment(ref.range, '多余参考文献');
-    });
-    console.log('匹配成功:', ok_cites);
-    console.log('匹配成功:', ok_refer_cites);
-    console.log('缺少参考文献:', fail_main_cites);
+    console.log('匹配结果', [...$.rbCite_pairs.entries()]);
     //写入批注
-    add_comment(sel().Range, fail_main_cites.length
-        ? '缺少参考文献的正文索引\r' + fail_main_cites.join('\r')
-        : '核对成功');
+    sel_range.add_comment(
+        fail_body_cites.length
+            ? '这些正文索引缺少参考文献\v' + fail_body_cites.join('\v')
+            : '正文核对成功'
+    );
     return !0;
 }
 function writeResult() {
@@ -233,9 +220,8 @@ function writeResult() {
 }
 const { createLink, insertLink } = function () {
     let uncited_bookmark_name = '';
-    function get_last_bookmark() {
-        return collection_operator(doc().Bookmarks).at(-1);
-    }
+    const get_last_bookmark = () => new Collection_decorator(doc().Bookmarks).at(-1);
+    const get_sel_range = () => new Range_decorator(sel().Range);
     return {
         createLink() {
             // 删除之前没被引用的书签
@@ -243,8 +229,8 @@ const { createLink, insertLink } = function () {
             if (uncited_bookmark_name === last_bookmark?.Name) {
                 last_bookmark.Delete();
             }
-            if (sel().Type == Enum.wdSelectionNormal) {
-                uncited_bookmark_name = add_bookmark(sel().Range).Name;
+            if (sel().Type === Enum.wdSelectionNormal) {
+                uncited_bookmark_name = get_sel_range().add_bookmark().Name;
                 alert('创建成功');
             } else {
                 alert('请先选中文本');
@@ -254,7 +240,7 @@ const { createLink, insertLink } = function () {
         insertLink() {
             const bookmark = get_last_bookmark();
             if (bookmark) {
-                cite_bookmark(bookmark);
+                get_sel_range().cite_bookmark(bookmark);
                 uncited_bookmark_name = '';
             } else {
                 alert('请先创建文本链接');
@@ -279,8 +265,7 @@ function addFigure() {
     ps.Add();
     ps.Add();
     ps.Add();
-    set_font_format(sel().Font);
-    set_paragraph_format(sel().Paragraphs);
+    new Range_decorator(sel().Range).set_default_text_format();
     //图注
     ps.Item(2).Range.Text = '注：±1个标准误\r';
     ps.Item(2).Range.Paragraphs.Alignment = Enum.wdAlignParagraphLeft;
@@ -299,8 +284,7 @@ function addTable() {
     ps.Add();
     ps.Add();
     ps.Add();
-    set_font_format(sel().Font);
-    set_paragraph_format(sel().Paragraphs);
+    new Range_decorator(sel().Range).set_default_text_format();
     //表题
     ps.Item(1).Range.Text = `表${doc().Tables.Count + 1}\t标题\r`;
     ps.Item(1).Range.Font.Name = '黑体';
@@ -308,7 +292,7 @@ function addTable() {
     ps.Item(1).Alignment = Enum.wdAlignParagraphCenter;
     //表注
     ps.Item(3).Range.Text = '注：N = 20, *p < 0.05, **p < 0.01, ***p < 0.001。';
-    collection_operator(ps.Item(3).Range.Words).map(e => {
+    new Collection_decorator(ps.Item(3).Range.Words).map(e => {
         if (/^ ?[Np] ?$/.test(e.Text)) {
             e.Font.Italic = true;
         }
@@ -326,26 +310,26 @@ function addTable() {
     }
     const table = sel().Tables.Item(1);
     //设置表格格式
-    const rows_operator = collection_operator(table.Rows);
+    const rows_operator = new Collection_decorator(table.Rows);
     rows_operator.map(row => {
         row.SetHeight(13.8, Enum.wdRowHeightAuto);
     });
     table.AutoFitBehavior(2); // 根据活动窗口的宽度自动调整表格大小
     table.Borders.InsideLineStyle = 0;
     table.Borders.OutsideLineStyle = 0;
+    set_border_line(rows_operator.at(0), Enum.wdBorderTop, Enum.wdLineWidth150pt);
+    set_border_line(rows_operator.at(0), Enum.wdBorderBottom, Enum.wdLineWidth075pt);
+    set_border_line(rows_operator.at(-1), Enum.wdBorderBottom, Enum.wdLineWidth150pt);
     function set_border_line(row, orientation, LineWidth) {
         row.Borders.Item(orientation).set({
             LineStyle: Enum.wdLineStyleSingle,
             LineWidth,
         });
     };
-    set_border_line(rows_operator.at(0), Enum.wdBorderTop, Enum.wdLineWidth150pt);
-    set_border_line(rows_operator.at(0), Enum.wdBorderBottom, Enum.wdLineWidth075pt);
-    set_border_line(rows_operator.at(-1), Enum.wdBorderBottom, Enum.wdLineWidth150pt);
     //设置内容格式
     table.Range.Select();
     sel().ClearFormatting();
-    set_font_format(sel().Font);
+    new Range_decorator(sel().Range).set_default_text_format();
     return !0;
 }
 function addFlowChart() {
@@ -439,7 +423,8 @@ function addFlowChart() {
 //     return !0
 // }
 function syntaxParser() {
-    const paragraphs_operator = collection_operator(sel().Paragraphs).set({
+    const paragraphs_operator = new Collection_decorator(sel().Paragraphs);
+    paragraphs_operator.set({
         parse() {
             this.paragraph_info_objs = this.map((p, index) => {
                 if (p.Range.Text.length === 1) {
@@ -491,17 +476,14 @@ function syntaxParser() {
     ];
     function operator_parser(range) {
         const operators = Object.keys(operator_fns);
-        function is_useless(e) {
-            return e.Text.length === 1 && '\r\v '.includes(e.Text);
-        }
-        progressive_search(range, 'Sentences', (e, i, arr) => {
-            if (is_useless(e)) {
+        new Range_decorator(range).progressive_search('Sentences', (e, i, arr) => {
+            if (is_null_range(e)) {
                 return;
             }
             if (operators.some(operator => e.Text === operator)) {
                 // e: 操作符
                 const next_e = arr.Item(i + 1);
-                if (is_useless(next_e)) {
+                if (is_null_range(next_e)) {
                     return;
                 }
                 const previous_e = arr.Item(i - 1);
@@ -549,8 +531,7 @@ function syntaxParser() {
             list?.ApplyListTemplate(wps.ListGalleries.Item(3).ListTemplates.Item(7)); //多级编号
         }
         // 识别标识符
-        set_font_format(sel().Font);
-        set_paragraph_format(sel().Paragraphs);
+        new Range_decorator(sel().Range).set_default_text_format();
         paragraphs_operator.apply(identifier_fns);
     }
     main();
@@ -580,7 +561,7 @@ function update() {
             const { tag_name, body, zipball_url } = data;
             if ($.version == tag_name) {
                 alert('已是最新版');
-            } else if (confirm(`是否下载最新版?\n版本: ${tag_name}\n描述: ${body}`)) {
+            } else if (confirm(`最新版: ${tag_name}\n${body}\n是否下载?`)) {
                 open_url_in_local(zipball_url);
             }
         } else {
@@ -597,87 +578,3 @@ function update() {
 function test() {
     return !0;
 }
-
-const UI = function (ui) {
-    [
-        'Enabled',
-        'Label',
-        'Screentip',
-        'Supertip',
-    ].forEach(prop => {
-        ui['get' + prop] = function ({ Id }) {
-            const value = ui.controls[Id]?.[prop] ?? '';
-            return typeof value == 'function' ? value() : value;
-        };
-    });
-    return ui;
-}({
-    controls: {
-        r1: {
-            Enabled: true,
-            Label: '检查索引',
-            Screentip: '检查参考文献是否按APA格式进行索引',
-            Supertip: '请先选中参考文献',
-        },
-        r2: {
-            Enabled: true,
-            Label: '核对索引',
-            Screentip: '核对正文索引和参考文献列表是否一一对应',
-            Supertip: '请先选中正文',
-        },
-        w1: {
-            Enabled: true,
-            Label: '撰写结果',
-            Screentip: '通过输入统计数据自动生成结果部分',
-            Supertip: '单击打开网页程序',
-        },
-        w2: {
-            Enabled: true,
-            Label: '创建文链',
-            Screentip: '创建文本链接',
-            Supertip: '请先选中文本',
-        },
-        w3: {
-            Enabled: true,
-            Label: '插入文链',
-            Screentip: '插入文本链接',
-            Supertip: '将之前创建的文链插入光标处',
-        },
-        c1: {
-            Enabled: true,
-            Label: '作图',
-            Screentip: '',
-            Supertip: '',
-        },
-        c2: {
-            Enabled: true,
-            Label: '作表',
-            Screentip: '以三线表格式粘贴表格',
-            Supertip: '请先复制表格',
-        },
-        c3: {
-            Enabled: true,
-            Label: '流程图',
-            Screentip: '',
-            Supertip: '',
-        },
-        o1: {
-            Enabled: true,
-            Label: '格式解析',
-            Screentip: '对格式文本进行解析',
-            Supertip: '请先选中需要解析的文本',
-        },
-        o2: {
-            Enabled: true,
-            Label: '帮助',
-            Screentip: '',
-            Supertip: '',
-        },
-        o3: {
-            Enabled: true,
-            Label: '更新',
-            Screentip: '当前版本',
-            Supertip: $.version,
-        },
-    },
-});
