@@ -2,7 +2,7 @@ export const sel = () => wps.Selection;
 export const doc = () => wps.ActiveDocument;
 export const Enum = wps.Enum;
 export const $ = {
-    version: 'v23.9-alpha.4',
+    version: 'v23.9-alpha.5',
     comment_Authors: {
         err: 'Σ(ﾟдﾟ;)',
         warn: '＞︿＜',

@@ -230,10 +230,9 @@ const actions = {
         return !0
     },
     update() {
-        const get_latest_api = 'https://api.github.com/repos/Cubxx/wpsAcademic/releases/latest';
         const controller = new AbortController();
         setTimeout(() => controller.abort(), 3e3);
-        fetch(get_latest_api, {
+        fetch('https://api.github.com/repos/Cubxx/wpsAcademic/releases/latest', {
             signal: controller.signal,
         }).then(async res => {
             const data = await res.json();
@@ -241,8 +240,8 @@ const actions = {
                 const { tag_name, body, zipball_url } = data;
                 if ($.version === tag_name) {
                     alert('已是最新版');
-                } else if (confirm(`最新版: ${tag_name}\n${body}\n是否下载?`)) {
-                    $.open_url_in_local(zipball_url);
+                } else {
+                    confirm(`最新版: ${tag_name}\n${body}\n是否下载?`) && $.open_url_in_local(zipball_url);
                 }
             } else {
                 alert('返回无效响应\n' + data.message);
