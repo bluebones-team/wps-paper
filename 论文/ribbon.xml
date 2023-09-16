@@ -1,25 +1,25 @@
-<customUI xmlns="http://schemas.microsoft.com/office/2006/01/customui" onLoad="onload">
+<customUI xmlns="http://schemas.microsoft.com/office/2006/01/customui" onLoad="actions.onload">
     <ribbon startFromScratch="false">
         <tabs>
             <tab id="paper" label="论文">
                 <group id="Refer_grp" label="参考文献">
-                    <button id="r1" onAction="checkCiteFormat.step" imageMso="Spelling" size="large" getEnabled="UI.getEnabled" getLabel="UI.getLabel" getScreentip="UI.getScreentip" getSupertip="UI.getSupertip"/>
-                    <button id="r2" onAction="matchCites.step" imageMso="FormControlCheckBox" size="large" getEnabled="UI.getEnabled" getLabel="UI.getLabel" getScreentip="UI.getScreentip" getSupertip="UI.getSupertip"/>
+                    <button id="r1" onAction="actions.checkCites" imageMso="Spelling" size="large" getLabel="UI.getLabel" getScreentip="UI.getScreentip" getSupertip="UI.getSupertip"/>
+                    <button id="r2" onAction="actions.matchCites" imageMso="FormControlCheckBox" size="large" getLabel="UI.getLabel" getScreentip="UI.getScreentip" getSupertip="UI.getSupertip"/>
                 </group>
                 <group id="Result_grp" label="结果">
-                    <button id="w1" onAction="writeResult" imageMso="CharacterBorder" size="large" getEnabled="UI.getEnabled" getLabel="UI.getLabel" getScreentip="UI.getScreentip" getSupertip="UI.getSupertip"/>
-                    <button id="w2" onAction="createLink.step" imageMso="Text" size="small" getEnabled="UI.getEnabled" getLabel="UI.getLabel" getScreentip="UI.getScreentip" getSupertip="UI.getSupertip"/>
-                    <button id="w3" onAction="insertLink.step" imageMso="HyperlinkInsert" size="small" getEnabled="UI.getEnabled" getLabel="UI.getLabel" getScreentip="UI.getScreentip" getSupertip="UI.getSupertip"/>
+                    <button id="w1" onAction="actions.writeResult" imageMso="CharacterBorder" size="large" getLabel="UI.getLabel" getScreentip="UI.getScreentip" getSupertip="UI.getSupertip"/>
+                    <button id="w2" onAction="actions.createLink" imageMso="Text" size="small" getLabel="UI.getLabel" getScreentip="UI.getScreentip" getSupertip="UI.getSupertip"/>
+                    <button id="w3" onAction="actions.insertLink" imageMso="HyperlinkInsert" size="small" getLabel="UI.getLabel" getScreentip="UI.getScreentip" getSupertip="UI.getSupertip"/>
                 </group>
                 <group id="Chart_grp" label="图表">
-                    <button id="c1" onAction="addFigure.step" imageMso="ChartInsert" size="small" getEnabled="UI.getEnabled" getLabel="UI.getLabel" getScreentip="UI.getScreentip" getSupertip="UI.getSupertip"/>
-                    <button id="c2" onAction="addTable.step" imageMso="TableEraser" size="small" getEnabled="UI.getEnabled" getLabel="UI.getLabel" getScreentip="UI.getScreentip" getSupertip="UI.getSupertip"/>
-                    <button id="" onAction="addFlowChart.step" imageMso="TracePrecedents" size="large" getEnabled="UI.getEnabled" getLabel="UI.getLabel" getScreentip="UI.getScreentip" getSupertip="UI.getSupertip"/>
+                    <button id="c1" onAction="actions.addFigure" imageMso="ChartInsert" size="small" getLabel="UI.getLabel" getScreentip="UI.getScreentip" getSupertip="UI.getSupertip"/>
+                    <button id="c2" onAction="actions.addTable" imageMso="TableEraser" size="small" getLabel="UI.getLabel" getScreentip="UI.getScreentip" getSupertip="UI.getSupertip"/>
+                    <button id="" onAction="actions.addFlowChart" imageMso="TracePrecedents" size="large" getLabel="UI.getLabel" getScreentip="UI.getScreentip" getSupertip="UI.getSupertip"/>
                 </group>
                 <group  id="Other_grp" label="其他">
-                    <button id="o1" onAction="syntaxParser.step" imageMso="XmlStructure" size="large" getEnabled="UI.getEnabled" getLabel="UI.getLabel" getScreentip="UI.getScreentip" getSupertip="UI.getSupertip"/>
-                    <button id="o2" onAction="showHelp" imageMso="Help" size="large" getEnabled="UI.getEnabled" getLabel="UI.getLabel" getScreentip="UI.getScreentip" getSupertip="UI.getSupertip"/>
-                    <button id="o3" onAction="update" imageMso="WindowNew" size="large" getEnabled="UI.getEnabled" getLabel="UI.getLabel" getScreentip="UI.getScreentip" getSupertip="UI.getSupertip"/>
+                    <button id="o1" onAction="actions.syntaxParser" imageMso="XmlStructure" size="large" getLabel="UI.getLabel" getScreentip="UI.getScreentip" getSupertip="UI.getSupertip"/>
+                    <button id="o2" onAction="actions.showHelp" imageMso="Help" size="large" getLabel="UI.getLabel" getScreentip="UI.getScreentip" getSupertip="UI.getSupertip"/>
+                    <button id="o3" onAction="actions.update" imageMso="WindowNew" size="large" getLabel="UI.getLabel" getScreentip="UI.getScreentip" getSupertip="UI.getSupertip"/>
                 </group>
             </tab>
         </tabs>

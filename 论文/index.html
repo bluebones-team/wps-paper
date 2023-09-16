@@ -1,8 +1,12 @@
 <!DOCTYPE html>
 <html>
 <meta charset="utf-8">
-<script language='javascript' src='js/util.js'></script>
-<script language='javascript' src='js/decorator.js'></script>
-<script language='javascript' src='js/ribbon.js'></script>
+<script type="module">
+    import { sel, doc, $ } from './js/util.js'
+    import { UI } from './js/ribbonUI.js'
+    import actions from './js/ribbon.js'
+    Object.prototype.set.call(window, { sel, doc, $, UI, actions, });
+</script>
 <h1>搭建成功</h1>
+
 </html>

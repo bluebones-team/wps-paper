@@ -3,13 +3,14 @@
 
 <head>
     <meta charset="utf-8">
-    <script type="text/javascript" src="../js/util.js"></script>
+    <script type="module">
+        import { $ } from "../js/util.js";
+        window.set($);
+    </script>
     <script>
-        var apa = 'https://apastyle.apa.org/style-grammar-guidelines/references/elements-list-entry',
-            aps = 'https://journal.psych.ac.cn/xlxb/fileup/0439-755X/ITEM/20220223114333.pdf';
         var help = {
-            deploy: 'https://github.com/Cubxx/wpsAcademic/blob/main/论文/README.md',
-            online: 'https://cubxx.github.io/wpsAcademic/论文/README.md',
+            web: 'https://github.com/Cubxx/wpsAcademic/blob/main/论文/README.md',
+            src: 'https://cubxx.github.io/wpsAcademic/论文/README.md',
             local: '../README.md',
             video: 'https://www.bilibili.com/list/525570753?sid=3253331',
         };
@@ -95,8 +96,10 @@
 
 <body>
     <ul id="refer">
-        <li onclick="open_url_in_local(apa)">APA索引格式</li>
-        <li onclick="open_url_in_local(aps)">《心理学报》索引格式</li>
+        <li web='https://apastyle.apa.org/style-grammar-guidelines/references/elements-list-entry'
+            onclick="open_url_in_local(this.getAttribute('web'))">APA索引格式</li>
+        <li web='https://journal.psych.ac.cn/xlxb/fileup/0439-755X/ITEM/20220223114333.pdf'
+            onclick="open_url_in_local(this.getAttribute('web'))">《心理学报》索引格式</li>
         <li onclick="open_url_in_local(help.video)">视频教程</li>
     </ul>
     <div id="content"></div>
@@ -145,12 +148,12 @@
                 } else {
                     info.err(`获取文件失败&emsp;${res.status}`);
                     info.add(res.url, res.url);
-                    info.add('请查看最新版文档', help.deploy);
+                    info.add('请查看最新版文档', help.web);
                 }
             }, err => {
                 info.err(err.stack); // TypeError: Failed to fetch ...         
                 info.add(res.url, res.url);
-                info.add('请查看最新版文档', help.deploy);
+                info.add('请查看最新版文档', help.web);
             });
         }
         function parseMD(text) {

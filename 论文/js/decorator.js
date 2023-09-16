@@ -1,3 +1,4 @@
+import { sel, doc, Enum, $ } from "./util.js";
 class Decorator {
     constructor(obj) {
         this.obj = obj;
@@ -38,12 +39,12 @@ class Collection_decorator extends Decorator {
     }
 }
 class Range_decorator extends Decorator {
-    add_comment(content) {
-        return this.obj.Comments.Add(this.obj, content).set({ Author: $.comment_Author });
+    add_comment(content, type = 'warn') {
+        return this.obj.Comments.Add(this.obj, content).set({ Author: $.comment_Authors[type] });
     }
     del_comment() {
         new Collection_decorator(this.obj.Comments).map(e => {
-            if (e.Author === $.comment_Author) {
+            if ($.comment_Authors.includes(e.Author)) {
                 e.Delete();
             }
         });
@@ -103,3 +104,4 @@ class Range_decorator extends Decorator {
         }(this.obj[name], names.indexOf(name));
     }
 }
+export { Collection_decorator, Range_decorator }
