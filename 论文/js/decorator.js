@@ -37,14 +37,25 @@ class Collection_decorator extends Decorator {
         }
         return arr;
     }
+    /**
+     * 迭代器
+     */
+    *[Symbol.iterator]() {
+        const len = this.obj.Count;
+        for (let i = 1; i <= len; i++) {
+            // 每次获取一次
+            yield this.obj.Item(i);
+        }
+    }
 }
 class Range_decorator extends Decorator {
     add_comment(content, type = 'warn') {
         return this.obj.Comments.Add(this.obj, content).set({ Author: $.comment_Authors[type] });
     }
     del_comment() {
+        const Authors = new Set(Object.values($.comment_Authors));
         new Collection_decorator(this.obj.Comments).map(e => {
-            if ($.comment_Authors.includes(e.Author)) {
+            if (Authors.has(e.Author)) {
                 e.Delete();
             }
         });
@@ -72,6 +83,7 @@ class Range_decorator extends Decorator {
     }
     set_paragraph_format(config = {}) {
         this.obj.Paragraphs.set({
+            Alignment: Enum.wdAlignParagraphJustify,
             CharacterUnitLeftIndent: 0, //左缩进量
             CharacterUnitRightIndent: 0,
             CharacterUnitFirstLineIndent: 0, //首行缩进
@@ -90,11 +102,11 @@ class Range_decorator extends Decorator {
     }
     /**
      * 递进查找
-     * @param {'Paragraphs'|'Sentences'|'Words'|'Characters'} name 起始集合
+     * @param {'Sentences'|'Words'|'Characters'} name 起始集合
      * @param {(e,i,arr) => boolean} fn
      */
     progressive_search(name, fn) {
-        const names = ['Paragraphs', 'Sentences', 'Words', 'Characters'];
+        const names = ['Sentences', 'Words', 'Characters'];
         !function recur(collection, recur_num) {
             new Collection_decorator(collection).map((e, i, arr) => {
                 if (fn(e, i, arr)) {

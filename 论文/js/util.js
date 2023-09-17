@@ -7,7 +7,7 @@ export const $ = {
         err: 'Σ(ﾟдﾟ;)',
         warn: '＞︿＜',
         ok: 'ヾ(≧▽≦*)o',
-        info: '_(:з」∠)_',
+        info: '(｀・ω・´)',
     },
     open_url_in_local(url) {
         wps.OAAssist.ShellExecute(url);
@@ -22,6 +22,9 @@ export const $ = {
             case 1: return '\r\v '.includes(range.Text);
             default: return false;
         }
+    },
+    has_special_char(text) {
+        return wps.CleanString(text) !== text
     },
     /**
      * 批量替换文本
@@ -43,11 +46,3 @@ export const $ = {
 Object.prototype.set = function (...configs) {
     return Object.assign(this, ...configs);
 };
-/**
- * 执行计时
- */
-Function.prototype.timed = function (...args) {
-    const st = +new Date();
-    this(...args);
-    return +new Date() - st;
-}
