@@ -4,12 +4,9 @@ export const Enum = window.wps?.Enum;
 export const $ = {
     urls: {
         release: 'https://api.github.com/repos/Cubxx/wps-paper/releases/latest',
-        writeResult: {
-            web: 'https://cubxx.github.io/wps-paper/论文/ui/writeResult.html',
-            local: location.origin + '/ui/writeResult.html',
-        },
+        writeResult: location.origin + '/ui/writeResult.html',
         help: {
-            web: 'https://github.com/Cubxx/wps-paper/blob/main/论文/help.md',
+            web: 'https://github.com/Cubxx/wps-paper/blob/main/help.md',
             local: location.origin + '/help.md',
             video: 'https://www.bilibili.com/list/525570753?sid=3253331',
         },

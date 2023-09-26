@@ -10,9 +10,7 @@ const actions = {
         return !0;
     },
     writeResult() {
-        confirm('是否打开稳定版？')
-            ? $.open_url_in_local($.urls.writeResult.local)
-            : $.open_url_in_local($.urls.writeResult.web)
+        $.open_url_in_local($.urls.writeResult);
         return !0;
     },
     addFigure() {
