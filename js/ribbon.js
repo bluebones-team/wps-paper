@@ -11,8 +11,8 @@ const actions = {
     },
     writeResult() {
         confirm('是否打开稳定版？')
-            ? $.open_url_in_local(location.origin + '/ui/writeResult.html')
-            : $.open_url_in_local(`https://cubxx.github.io/wpsAcademic/论文/ui/writeResult.html`)
+            ? $.open_url_in_local($.urls.writeResult.local)
+            : $.open_url_in_local($.urls.writeResult.web)
         return !0;
     },
     addFigure() {
@@ -232,13 +232,13 @@ const actions = {
     update() {
         const controller = new AbortController();
         setTimeout(() => controller.abort(), 3e3);
-        fetch('https://api.github.com/repos/Cubxx/wpsAcademic/releases/latest', {
+        fetch($.urls.release, {
             signal: controller.signal,
         }).then(async res => {
             const data = await res.json();
             if (res.ok) {
                 const { tag_name, body, zipball_url } = data;
-                if ($.version === tag_name) {
+                if (config.version === tag_name) {
                     alert('已是最新版');
                 } else {
                     confirm(`最新版: ${tag_name}\n${body}\n是否下载?`) && $.open_url_in_local(zipball_url);

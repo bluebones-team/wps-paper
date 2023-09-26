@@ -3,21 +3,6 @@
 
 <head>
     <meta charset="utf-8">
-    <script type="module">
-        import { $ } from "../js/util.js";
-        window.set($);
-    </script>
-    <script>
-        var help = {
-            web: 'https://github.com/Cubxx/wpsAcademic/blob/main/论文/README.md',
-            src: 'https://cubxx.github.io/wpsAcademic/论文/README.md',
-            local: '../README.md',
-            video: 'https://www.bilibili.com/list/525570753?sid=3253331',
-        };
-        var libs = {
-            marked: "https://cdnjs.cloudflare.com/ajax/libs/marked/0.6.2/marked.min.js",
-        };
-    </script>
     <style>
         body {
             background-color: #eee;
@@ -96,42 +81,56 @@
 
 <body>
     <ul id="refer">
-        <li web='https://apastyle.apa.org/style-grammar-guidelines/references/elements-list-entry'
-            onclick="open_url_in_local(this.getAttribute('web'))">APA索引格式</li>
-        <li web='https://journal.psych.ac.cn/xlxb/fileup/0439-755X/ITEM/20220223114333.pdf'
-            onclick="open_url_in_local(this.getAttribute('web'))">《心理学报》索引格式</li>
-        <li onclick="open_url_in_local(help.video)">视频教程</li>
+        <li link="1">APA索引格式</li>
+        <li link="2">《心理学报》索引格式</li>
+        <li link="3">视频教程</li>
     </ul>
     <div id="content"></div>
-    <script>
-        const content = document.querySelector('#content');
-        const info = {
-            add(text, link) {
-                if (link) {
-                    text = `<a onclick="open_url_in_local('${link}')">${text}</a>`
-                }
-                content.innerHTML += '<br>' + text;
+    <script type="module">
+        import { $ } from "../js/util.js";
+        const { help, libs } = $.urls;
+        const links = new Map([
+            ['1', 'https://apastyle.apa.org/style-grammar-guidelines/references/elements-list-entry'],
+            ['2', 'https://journal.psych.ac.cn/xlxb/fileup/0439-755X/ITEM/20220223114333.pdf'],
+            ['3', help.video],
+        ]);
+        const logger = {
+            content: document.querySelector('#content'),
+            fill(text) {
+                this.content.innerHTML = text;
+            },
+            log(text, link) {
+                this.content.innerHTML += '<br>' + link
+                    ? `<a onclick="open_url_in_local('${link}')">${text}</a>`
+                    : text;
             },
             err(msg, line = '') {
-                content.innerHTML += '<br>' + `<i style='color:red;'>${line}&emsp;${msg.replaceAll('\n', '<br>')}</i>`;
+                this.content.innerHTML += '<br>' + `<i style='color:red;'>${line}&emsp;${msg.replaceAll('\n', '<br>')}</i>`;
             },
         };
+        window.addEventListener('click', e => {
+            if (e.target.tagName === 'LI') {
+                const index = e.target.getAttribute('link');
+                links.has(index) && $.open_url_in_local(links.get(index));
+            }
+        });
         window.addEventListener('dblclick', () => location.reload());
-        window.addEventListener('error', ({ message, lineno }) => info.err(message, lineno));
-        window.addEventListener('unhandledrejection', ({ reason }) => info.err(reason.stack));
+        window.addEventListener('error', ({ message, lineno }) => logger.err(message, lineno));
+        window.addEventListener('unhandledrejection', ({ reason }) => logger.err(reason.stack));
+        fetchFile(help.local);
         function addScript(src) {
-            info.add('正在加载');
-            info.add(src, src);
+            logger.log('正在加载');
+            logger.log(src, src);
             return new Promise((resolve, reject) => {
                 const elm = Object.assign(document.createElement('script'), {
                     src: src,
                     type: "text/javascript",
                     onload: function () {
-                        info.add('加载成功');
+                        logger.log('加载成功');
                         resolve();
                     },
                     onerror: function () {
-                        info.err('加载失败');
+                        logger.err('加载失败');
                         reject();
                     }
                 });
@@ -142,30 +141,29 @@
             fetch(fileUrl).then(res => {
                 if (res.ok) {
                     res.text().then(text => {
-                        info.add('获取文件成功');
+                        logger.log('获取文件成功');
                         parseMD(text);
                     });
                 } else {
-                    info.err(`获取文件失败&emsp;${res.status}`);
-                    info.add(res.url, res.url);
-                    info.add('请查看最新版文档', help.web);
+                    logger.err(`获取文件失败&emsp;${res.status}`);
+                    logger.log(res.url, res.url);
+                    logger.log('请查看在线文档', help.web);
                 }
             }, err => {
-                info.err(err.stack); // TypeError: Failed to fetch ...         
-                info.add(res.url, res.url);
-                info.add('请查看最新版文档', help.web);
+                logger.err(err.stack); // TypeError: Failed to fetch ...         
+                logger.log(res.url, res.url);
+                logger.log('请查看在线文档', help.web);
             });
         }
         function parseMD(text) {
             Promise.all([
                 addScript(libs.marked),
             ]).then(() => {
-                content.innerHTML = marked.parse(text);
+                logger.fill(marked.parse(text));
             }, () => {
-                info.add('资源请求错误<br>请联系作者');
+                logger.log('资源请求错误', help.local);
             });
         }
-        fetchFile(help.local);
     </script>
 </body>
 

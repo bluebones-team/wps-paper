@@ -1,5 +1,4 @@
-import { $ } from "./util.js";
-export const UI = function (ui) {
+const UI = function (ui) {
     [
         'Label',
         'Screentip',
@@ -66,7 +65,8 @@ export const UI = function (ui) {
         o3: {
             Label: '更新',
             Screentip: '当前版本',
-            Supertip: $.version,
+            Supertip: config.version,
         },
     },
 });
+export default UI;

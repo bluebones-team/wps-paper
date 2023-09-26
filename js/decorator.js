@@ -1,4 +1,4 @@
-import { sel, doc, Enum, $ } from "./util.js";
+import { doc, Enum } from "./util.js";
 class Decorator {
     constructor(obj) {
         this.obj = obj;
@@ -48,14 +48,14 @@ class Collection_decorator extends Decorator {
         }
     }
 }
+const comment_values = new Set(Object.values(config.comments));
 class Range_decorator extends Decorator {
     add_comment(content, type = 'warn') {
-        return this.obj.Comments.Add(this.obj, content).set({ Author: $.comment_Authors[type] });
+        return this.obj.Comments.Add(this.obj, content).set({ Author: config.comments[type] });
     }
     del_comment() {
-        const Authors = new Set(Object.values($.comment_Authors));
         new Collection_decorator(this.obj.Comments).map(e => {
-            if (Authors.has(e.Author)) {
+            if (comment_values.has(e.Author)) {
                 e.Delete();
             }
         });

@@ -1,13 +1,21 @@
 export const sel = () => wps.Selection;
 export const doc = () => wps.ActiveDocument;
-export const Enum = wps.Enum;
+export const Enum = window.wps?.Enum;
 export const $ = {
-    version: 'v23.9-alpha.5',
-    comment_Authors: {
-        err: 'Σ(ﾟдﾟ;)',
-        warn: '＞︿＜',
-        ok: 'ヾ(≧▽≦*)o',
-        info: '(｀・ω・´)',
+    urls: {
+        release: 'https://api.github.com/repos/Cubxx/wps-paper/releases/latest',
+        writeResult: {
+            web: 'https://cubxx.github.io/wps-paper/论文/ui/writeResult.html',
+            local: location.origin + '/ui/writeResult.html',
+        },
+        help: {
+            web: 'https://github.com/Cubxx/wps-paper/blob/main/论文/help.md',
+            local: location.origin + '/help.md',
+            video: 'https://www.bilibili.com/list/525570753?sid=3253331',
+        },
+        libs: {
+            marked: "https://cdnjs.cloudflare.com/ajax/libs/marked/0.6.2/marked.min.js",
+        },
     },
     open_url_in_local(url) {
         wps.OAAssist.ShellExecute(url);
