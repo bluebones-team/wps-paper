@@ -86,9 +86,10 @@
         <li link="3">视频教程</li>
     </ul>
     <div id="content"></div>
+    <script src="../config.js"></script>
     <script type="module">
         import { $ } from "../js/util.js";
-        const { help, libs } = $.urls;
+        const { help, libs } = config.urls;
         const links = new Map([
             ['1', 'https://apastyle.apa.org/style-grammar-guidelines/references/elements-list-entry'],
             ['2', 'https://journal.psych.ac.cn/xlxb/fileup/0439-755X/ITEM/20220223114333.pdf'],
@@ -119,19 +120,14 @@
         window.addEventListener('unhandledrejection', ({ reason }) => logger.err(reason.stack));
         fetchFile(help.local);
         function addScript(src) {
-            logger.log('正在加载');
-            logger.log(src, src);
             return new Promise((resolve, reject) => {
                 const elm = Object.assign(document.createElement('script'), {
-                    src: src,
-                    type: "text/javascript",
-                    onload: function () {
-                        logger.log('加载成功');
-                        resolve();
+                    src,
+                    onload() {
+                        resolve('加载成功');
                     },
-                    onerror: function () {
-                        logger.err('加载失败');
-                        reject();
+                    onerror() {
+                        reject('加载失败');
                     }
                 });
                 document.head.appendChild(elm);

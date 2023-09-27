@@ -46,27 +46,26 @@ def add_XML(path, config):
     if not os.path.exists(path):
         with open(path, 'w') as f:
             f.write('<jsplugins>\n</jsplugins>')
-    else:
-        tree = et.parse(path)
-        root = tree.getroot()
-        nodes = list(
-            filter(lambda node: node.attrib['name'] == config['name'], root.findall('jsplugin'))
-        )
-        if nodes == []:
-            root.append(
-                et.Element(
-                    'jsplugin',
-                    {
-                        'name': config['name'],
-                        'type': 'wps',
-                        'url': 'https://github.com/Cubxx/wps-paper',
-                        'version': config['version'],
-                    },
-                )
+    tree = et.parse(path)
+    root = tree.getroot()
+    nodes = list(
+        filter(lambda node: node.attrib['name'] == config['name'], root.findall('jsplugin'))
+    )
+    if nodes == []:
+        root.append(
+            et.Element(
+                'jsplugin',
+                {
+                    'name': config['name'],
+                    'type': 'wps',
+                    'url': 'https://github.com/Cubxx/wps-paper',
+                    'version': config['version'],
+                },
             )
-        else:
-            nodes[0].attrib['version'] = config['version']
-        tree.write(path, encoding='utf-8')
+        )
+    else:
+        nodes[0].attrib['version'] = config['version']
+    tree.write(path, encoding='utf-8')
 
 
 def main():

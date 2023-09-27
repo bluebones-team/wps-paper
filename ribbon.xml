@@ -18,8 +18,8 @@
                 </group>
                 <group  id="Other_grp" label="其他">
                     <button id="o1" onAction="actions.syntaxParser" imageMso="XmlStructure" size="large" getLabel="UI.getLabel" getScreentip="UI.getScreentip" getSupertip="UI.getSupertip"/>
-                    <button id="o2" onAction="actions.showHelp" imageMso="Help" size="large" getLabel="UI.getLabel" getScreentip="UI.getScreentip" getSupertip="UI.getSupertip"/>
-                    <button id="o3" onAction="actions.update" imageMso="WindowNew" size="large" getLabel="UI.getLabel" getScreentip="UI.getScreentip" getSupertip="UI.getSupertip"/>
+                    <button id="o2" onAction="actions.showHelp" imageMso="Help" size="small" getLabel="UI.getLabel" getScreentip="UI.getScreentip" getSupertip="UI.getSupertip"/>
+                    <button id="o3" onAction="actions.update" imageMso="WindowNew" size="small" getLabel="UI.getLabel" getScreentip="UI.getScreentip" getSupertip="UI.getSupertip"/>
                 </group>
             </tab>
         </tabs>

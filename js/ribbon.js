@@ -1,5 +1,5 @@
 import { sel, doc, Enum, $ } from "./util.js";
-import { Collection_decorator, Range_decorator } from './decorator.js'
+import { Collection_decorator, Range_decorator } from './decorator.js';
 const actions = {
     onload(ribbonUI) {
         wps.ribbonUI ??= ribbonUI;
@@ -10,7 +10,7 @@ const actions = {
         return !0;
     },
     writeResult() {
-        $.open_url_in_local($.urls.writeResult);
+        $.open_url_in_local(config.urls.writeResult);
         return !0;
     },
     addFigure() {
@@ -38,7 +38,6 @@ const actions = {
         ps.Item(3).Alignment = Enum.wdAlignParagraphCenter;
         sel().ParagraphFormat.CharacterUnitFirstLineIndent = 0;
         doc().Fields.Update(); // 更新文档所有域
-        return !0;
     },
     addTable() {
         sel().Text = '';
@@ -69,7 +68,7 @@ const actions = {
         sel().PasteAndFormat(Enum.wdChart); // 粘贴表格
         if (doc().Tables.Count !== tableCount + 1) {
             sel().Text = '作表失败 请先复制Excel表格\r';
-            return !0;
+            return;
         }
         const table = sel().Tables.Item(1);
         //设置表格格式
@@ -93,25 +92,18 @@ const actions = {
         table.Range.Select();
         sel().ClearFormatting();
         new Range_decorator(sel().Range).set_default_text_format();
-        return !0;
     },
     addFlowChart() {
-        const shp = doc().Shapes,
-            config = { wh: [60, 40], position: { abs: [0, 0], rel: [0, 0] } };
-        shp.AddTextbox(1, 0, 0, ...config.wh).TextFrame.TextRange.Text = '程序1';
-        shp.AddTextbox(1, 0, 0, ...config.wh).TextFrame.TextRange.Text = '程序2';
-        shp.AddTextbox(1, 0, 0, ...config.wh).TextFrame.TextRange.Text = '程序3';
-        return !0;
+        doc().InlineShapes.AddWebShapeEx(location.origin + '/ui/mermaid.html');
     },
     syntaxParser() {
         const paragraphs = new Collection_decorator(sel().Paragraphs);
         if (!$.is_null_range(paragraphs.at(-1).Range)) {
-            alert('选中文本的最后一行应为空行');
-            return !0;
+            paragraphs.at(-1).Range.Text += '\r';
         }
         const paragraphs_operator = {
             infos: paragraphs.map((p, index) => {
-                if (p.Range.Text.length === 1) {
+                if ($.is_null_range(p.Range)) {
                     return {};
                 }
                 const matchRes = p.Range.Text.match(/^\\([a-z]+) /);
@@ -213,7 +205,6 @@ const actions = {
             paragraphs_operator.apply(identifier_fns);
         }
         main();
-        return !0;
     },
     showHelp() {
         const helpID = wps.PluginStorage.getItem("helpPanel_id");
@@ -230,7 +221,7 @@ const actions = {
     update() {
         const controller = new AbortController();
         setTimeout(() => controller.abort(), 3e3);
-        fetch($.urls.release, {
+        fetch(config.urls.release, {
             signal: controller.signal,
         }).then(async res => {
             const data = await res.json();
@@ -442,7 +433,6 @@ const cite_actions = function () {
                 console.log('每秒词数：' + sel().Words.Count * 1e3 / timer(set_paragraphs));
             }
             main();
-            return !0;
         },
         matchCites() {
             if ($.is_null_range(sel().Range)) {
@@ -455,6 +445,7 @@ const cite_actions = function () {
             }
             $.replaceAll('（）', '()');
             //提取索引
+            /**@type {string}*/
             const text = sel().Text;
             const refer_cites = [...rbCite_map.keys()];
             const body_cites = [
@@ -479,6 +470,10 @@ const cite_actions = function () {
                 console.log('正文索引', body_cites);
                 console.log('匹配结果', [...rbCite_map.entries()]);
             }
+            /**
+             * @param {string[]} body_cites 
+             * @param {string[]} fail_body_cites 
+             */
             function addComments(body_cites, fail_body_cites) {
                 //正文批注
                 const sel_range = new Range_decorator(sel().Range);
@@ -511,9 +506,10 @@ const cite_actions = function () {
             }
             /**
              * 基于 condition_arr 中的元素筛选 target_arr 中的元素
-             * @param {string[]} target_arr 
-             * @param {ref[]} condition_arr 
-             * @param {(condition:ref)=>boolean} fn
+             * @template T,R
+             * @param {T[]} target_arr 
+             * @param {R[]} condition_arr 
+             * @param {(target:T,condition:R)=>boolean} fn
              */
             function filter_by_array(target_arr, condition_arr, fn) {
                 const filtered_arr = [];
@@ -529,14 +525,18 @@ const cite_actions = function () {
             }
             /**
              * 求数组差集
+             * @template T
+             * @param {T[]} target 
+             * @param {T[]} arr 
              */
             function diff(target, arr) {
                 const set = new Set(arr);
                 return [...new Set(target)].filter(x => !set.has(x))
             }
             /**
-             * 获取参考文献关键信息[author,date]
-             * @param {ref[]} refers 
+             * 获取参考文献关键信息
+             * @param {ref[]} refers
+             * @returns {[ref, [author, date]][]}
              */
             function get_refer_infos(refers) {
                 return refers.map(ref => {
@@ -546,7 +546,6 @@ const cite_actions = function () {
                 });
             }
             main();
-            return !0;
         },
     }
 }();
@@ -575,7 +574,6 @@ const link_actions = function () {
             } else {
                 alert('请先创建文本链接');
             }
-            return !0;
         }
     }
 }();
@@ -584,7 +582,7 @@ actions.set(cite_actions, link_actions);
 function step(...args) {
     wps.UndoRecord.StartCustomRecord('论文_' + this.name);
     try {
-        this.apply(actions, args);
+        this.apply(null, args);
     } catch (e) {
         new Range_decorator(sel().Range).add_comment('意料外的错误\v请撤销这个操作\v' + e, 'err');
         console.error(e);

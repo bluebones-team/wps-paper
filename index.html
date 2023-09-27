@@ -6,7 +6,8 @@
     import { sel, doc, $ } from './js/util.js'
     import UI from './js/ribbonUI.js'
     import actions from './js/ribbon.js'
-    Object.prototype.set.call(window, { sel, doc, $, UI, actions, });
+    import { Collection_decorator, Range_decorator } from './js/decorator.js';
+    Object.prototype.set.call(window, { sel, doc, $, UI, actions, Collection_decorator, Range_decorator, });
 </script>
 
 </html>

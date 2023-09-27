@@ -2,19 +2,10 @@ export const sel = () => wps.Selection;
 export const doc = () => wps.ActiveDocument;
 export const Enum = window.wps?.Enum;
 export const $ = {
-    urls: {
-        release: 'https://api.github.com/repos/Cubxx/wps-paper/releases/latest',
-        writeResult: location.origin + '/ui/writeResult.html',
-        help: {
-            web: 'https://github.com/Cubxx/wps-paper/blob/main/help.md',
-            local: location.origin + '/help.md',
-            video: 'https://www.bilibili.com/list/525570753?sid=3253331',
-        },
-        libs: {
-            marked: "https://cdnjs.cloudflare.com/ajax/libs/marked/0.6.2/marked.min.js",
-        },
-    },
     open_url_in_local(url) {
+        if (url[0] === '/') {
+            url = location.origin + url;
+        }
         wps.OAAssist.ShellExecute(url);
     },
     open_url_in_wps(url, caption, width, height) {
@@ -24,7 +15,7 @@ export const $ = {
         const char_num = range.Text.length;
         switch (char_num) {
             case 0: return true;
-            case 1: return '\r\v '.includes(range.Text);
+            case 1: return '\r\v\f '.includes(range.Text);
             default: return false;
         }
     },

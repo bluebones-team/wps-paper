@@ -6,9 +6,9 @@ class Decorator {
 }
 class Collection_decorator extends Decorator {
     /**
-    * @param {boolean} order true：正序
-    */
-    map(fn, order) {
+     * @param {boolean} order true：正序
+     */
+    map(fn, order = false) {
         const len = this.obj.Count;
         const arr = [];
         for (let i = len; i > 0; i--) {
@@ -26,6 +26,7 @@ class Collection_decorator extends Decorator {
             return this.obj.Item(index + 1);
         if (index < 0 && index >= -len)
             return this.obj.Item(len + index + 1);
+        throw '索引超过集合长度';
     }
     /**
      * 数组切片
