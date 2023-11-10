@@ -236,7 +236,7 @@ const actions = {
                     $.open_url_in_local(config.urls.zip);
                 }
             } else {
-                alert('返回无效响应\n' + text.message);
+                alert('返回无效响应\n' + text);
             }
         }).catch(err => {
             const info = err.name === 'AbortError'
