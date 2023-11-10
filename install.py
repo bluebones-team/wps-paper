@@ -20,14 +20,14 @@ import logging
 import xml.etree.ElementTree as et
 
 
-def get_config(path):
+def get_config(path: str) -> dict:
     logging.info('获取配置文件')
     with open(path, encoding='utf-8') as f:
         json_str = f.read().replace('const config = ', '')
     return json.loads(json_str)
 
 
-def copy_dir_to(new_parent_dir, config):
+def copy_dir_to(new_parent_dir: str, config: dict):
     logging.info('复制当前文件夹')
     this_path = os.path.abspath(__file__)
     this_dir = os.path.dirname(this_path)
@@ -37,11 +37,13 @@ def copy_dir_to(new_parent_dir, config):
         if config['name'] in dir_name:
             shutil.rmtree(new_parent_dir + os.path.sep + dir_name)
     shutil.copytree(
-        this_dir, new_dir, ignore=shutil.ignore_patterns('.git', 'web.config', LOG_NAME)
+        this_dir,
+        new_dir,
+        ignore=shutil.ignore_patterns('.git', 'web.config', '.gitignore', LOG_NAME),
     )
 
 
-def add_XML(path, config):
+def add_XML(path: str, config: dict):
     logging.info('添加加载项信息')
     if not os.path.exists(path):
         with open(path, 'w') as f:
@@ -70,7 +72,7 @@ def add_XML(path, config):
 
 def main():
     JSADDON_DIR = os.environ['APPDATA'] + '\\kingsoft\\wps\\jsaddons'
-    XML_PATH = JSADDON_DIR + os.path.sep + 'jsplugins.xml'
+    XML_PATH = JSADDON_DIR + '\\jsplugins.xml'
     CONFIG = get_config('config.js')
     if not os.path.exists(JSADDON_DIR):
         os.makedirs(JSADDON_DIR)

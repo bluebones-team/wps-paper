@@ -221,19 +221,22 @@ const actions = {
     update() {
         const controller = new AbortController();
         setTimeout(() => controller.abort(), 3e3);
-        fetch(config.urls.release, {
+        fetch(config.urls.version, {
             signal: controller.signal,
         }).then(async res => {
-            const data = await res.json();
+            const text = await res.text();
             if (res.ok) {
-                const { tag_name, body, zipball_url } = data;
-                if (config.version === tag_name) {
+                const version = text.match(/"version": "(v\d+\.\d+)"/)?.[1];
+                if (version === void 0) {
+                    return alert('更新失败: 无法获取版本号');
+                }
+                if (config.version === version) {
                     alert('已是最新版');
-                } else {
-                    confirm(`最新版: ${tag_name}\n${body}\n是否下载?`) && $.open_url_in_local(zipball_url);
+                } else if (confirm(`最新版: ${version}\n是否下载?`)) {
+                    $.open_url_in_local(config.urls.zip);
                 }
             } else {
-                alert('返回无效响应\n' + data.message);
+                alert('返回无效响应\n' + text.message);
             }
         }).catch(err => {
             const info = err.name === 'AbortError'
