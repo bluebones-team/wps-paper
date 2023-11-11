@@ -1,6 +1,8 @@
-import { sel, doc, Enum, $ } from "./util.js";
-import { Collection_decorator, Range_decorator } from './decorator.js';
-const actions = {
+import { config } from '../config.js';
+import { root_path, open_url_in_local, open_url_in_wps, load_fetch, loads_orderly } from '../lib/web.js';
+import { sel, doc, Enum, $ } from './util.js';
+import { Collection, Range } from './decorator.js';
+const app_base = {
     onload(ribbonUI) {
         wps.ribbonUI ??= ribbonUI;
         wps.Enum ??= {
@@ -9,11 +11,49 @@ const actions = {
         };
         return !0;
     },
-    writeResult() {
-        $.open_url_in_local(config.urls.writeResult);
+    update() {
+        loads_orderly(config.update.v, load_fetch)
+            .then(async res => {
+                const text = await res.text();
+                const version = text.match(/version: '([\s\S]+?)'/)?.[1];
+                if (version === void 0) {
+                    return alert('更新失败: 无法获取版本号');
+                }
+                if (config.version === version) {
+                    alert('已是最新版');
+                } else if (confirm(`最新版: ${version}\n是否下载?`)) {
+                    open_url_in_local(config.update.zip);
+                }
+            }).catch(err => {
+                console.error(err);
+                alert('更新失败: 请尝试科学上网');
+            });
         return !0;
     },
-    addFigure() {
+    test() {
+        return !0;
+    },
+};
+const app_ui = {
+    write_result() {
+        open_url_in_wps(config.ui.write_result.html, '撰写结果工具', 900, 550);
+        return !0;
+    },
+    show_help() {
+        const helpID = wps.PluginStorage.getItem('helpPanel_id');
+        if (!helpID) {
+            const helpPanel = wps.CreateTaskPane(root_path + config.ui.help.html);
+            wps.PluginStorage.setItem('helpPanel_id', helpPanel.ID);
+            helpPanel.Visible = true
+        } else {
+            const helpPanel = wps.GetTaskPane(+helpID);
+            helpPanel.Visible = !helpPanel.Visible
+        }
+        return !0
+    },
+};
+const other = {
+    add_figure() {
         sel().Text = '';
         //图表
         // const shape = doc().InlineShapes.AddChart(Enum.xlColumnClustered);
@@ -28,7 +68,7 @@ const actions = {
         ps.Add();
         ps.Add();
         ps.Add();
-        new Range_decorator(sel().Range).set_default_text_format();
+        new Range(sel().Range).set_default_text_format();
         //图注
         ps.Item(2).Range.Text = '注：±1个标准误\r';
         ps.Item(2).Range.Paragraphs.Alignment = Enum.wdAlignParagraphLeft;
@@ -39,14 +79,14 @@ const actions = {
         sel().ParagraphFormat.CharacterUnitFirstLineIndent = 0;
         doc().Fields.Update(); // 更新文档所有域
     },
-    addTable() {
+    add_table() {
         sel().Text = '';
         const ps = sel().Paragraphs;
         ps.Add();
         ps.Add();
         ps.Add();
         ps.Add();
-        new Range_decorator(sel().Range).set_default_text_format();
+        new Range(sel().Range).set_default_text_format();
         //表题
         ps.Item(1).Range.Text = `表${doc().Tables.Count + 1}\t标题\r`;
         ps.Item(1).Range.Font.Name = '黑体';
@@ -54,9 +94,9 @@ const actions = {
         ps.Item(1).Alignment = Enum.wdAlignParagraphCenter;
         //表注
         ps.Item(3).Range.Text = '注：N = 20, *p < 0.05, **p < 0.01, ***p < 0.001。';
-        new Collection_decorator(ps.Item(3).Range.Words).map(e => {
+        new Collection(ps.Item(3).Range.Words).map(e => {
             if (/^ ?[Np] ?$/.test(e.Text)) {
-                e.Font.Italic = true;
+                e.Font.Italic = 1;
             }
         });
         ps.Item(3).Range.Paragraphs.Alignment = Enum.wdAlignParagraphLeft;
@@ -72,7 +112,7 @@ const actions = {
         }
         const table = sel().Tables.Item(1);
         //设置表格格式
-        const rows_operator = new Collection_decorator(table.Rows);
+        const rows_operator = new Collection(table.Rows);
         rows_operator.map(row => {
             row.SetHeight(13.8, Enum.wdRowHeightAuto);
         });
@@ -91,13 +131,13 @@ const actions = {
         //设置内容格式
         table.Range.Select();
         sel().ClearFormatting();
-        new Range_decorator(sel().Range).set_default_text_format();
+        new Range(sel().Range).set_default_text_format();
     },
-    addFlowChart() {
-        doc().InlineShapes.AddWebShapeEx(location.origin + '/ui/mermaid.html');
+    add_flowChart() {
+        doc().InlineShapes.AddWebShapeEx('/ui/mermaid.html');
     },
-    syntaxParser() {
-        const paragraphs = new Collection_decorator(sel().Paragraphs);
+    syntax_parser() {
+        const paragraphs = new Collection(sel().Paragraphs);
         if (!$.is_null_range(paragraphs.at(-1).Range)) {
             paragraphs.at(-1).Range.Text += '\r';
         }
@@ -108,15 +148,19 @@ const actions = {
                 }
                 const matchRes = p.Range.Text.match(/^\\([a-z]+) /);
                 if (matchRes) {
-                    p.Range.Text = matchRes.input.replace(matchRes[0], '');
+                    p.Range.Text = matchRes.input?.replace(matchRes[0], '') ?? '';
                 }
                 return {
                     index,
                     identifier: matchRes?.[1] ?? 'p',
                 };
             }),
+            /**
+             * @param {Record<string,(p:Wps.WpsParagraph)=>void>} fns 
+             */
             apply(fns) {
                 this.infos.map(({ index, identifier }) => {
+                    if (!index) return;
                     fns[identifier]?.(paragraphs.at(index - 1));
                 });
             },
@@ -151,7 +195,7 @@ const actions = {
         ];
         function operator_parser(range) {
             const operators = Object.keys(operator_fns);
-            new Range_decorator(range).progressive_search('Sentences', (e, i, arr) => {
+            new Range(range).progressive_search('Sentences', (e, i, arr) => {
                 if ($.is_null_range(e)) {
                     return;
                 }
@@ -181,11 +225,10 @@ const actions = {
         }
         function main() {
             // 替换特殊符号
-            $.replaceAll(...Object.keys(special_symbols[0]).map(col =>
-                special_symbols.map(row =>
-                    (!!+col ? '' : '\\') + row[col]
-                )
-            ));
+            $.replace_all(
+                special_symbols.map(e => e[0]),
+                special_symbols.map(e => e[1])
+            );
             // 构建list
             sel().ClearFormatting();
             const list_num = doc().Lists.Count;
@@ -201,63 +244,21 @@ const actions = {
                 list.ApplyListTemplate(wps.ListGalleries.Item(3).ListTemplates.Item(7)); //多级编号
             }
             // 识别标识符
-            new Range_decorator(sel().Range).set_default_text_format();
+            new Range(sel().Range).set_default_text_format();
             paragraphs_operator.apply(identifier_fns);
         }
         main();
     },
-    showHelp() {
-        const helpID = wps.PluginStorage.getItem("helpPanel_id");
-        if (!helpID) {
-            const helpPanel = wps.CreateTaskPane(location.origin + "/ui/help.html");
-            wps.PluginStorage.setItem("helpPanel_id", helpPanel.ID);
-            helpPanel.Visible = true
-        } else {
-            const helpPanel = wps.GetTaskPane(helpID)
-            helpPanel.Visible = !helpPanel.Visible
-        }
-        return !0
-    },
-    update() {
-        const controller = new AbortController();
-        setTimeout(() => controller.abort(), 3e3);
-        fetch(config.urls.version, {
-            signal: controller.signal,
-        }).then(async res => {
-            const text = await res.text();
-            if (res.ok) {
-                const version = text.match(/"version": "(v\d+\.\d+)"/)?.[1];
-                if (version === void 0) {
-                    return alert('更新失败: 无法获取版本号');
-                }
-                if (config.version === version) {
-                    alert('已是最新版');
-                } else if (confirm(`最新版: ${version}\n是否下载?`)) {
-                    $.open_url_in_local(config.urls.zip);
-                }
-            } else {
-                alert('返回无效响应\n' + text);
-            }
-        }).catch(err => {
-            const info = err.name === 'AbortError'
-                ? '连接GitHub超时'
-                : '无法连接GitHub';
-            alert(info + '\n请尝试科学上网');
-        });
-        return !0;
-    },
-    test() {
-        return !0;
-    },
 };
-const cite_actions = function () {
-    /** @type{Map<{range: Range, segments: string[]}, string[]>} */
+const cite = function () {
+    /** @typedef {{range: Wps.WpsRange, segments: string[]}} reference*/
+    /** @type {Map<reference, string[]>} */
     const rbCite_map = new Map();
     return {
-        checkCites() {
+        check_cites() {
             if ($.is_null_range(sel().Range)) {
                 alert('请先选中参考文献');
-                return !0;
+                return;
             }
             //常量
             const reg_cn_author = /(^\[?[\u4e00-\u9fa5]{2,4}(, [\u4e00-\u9fa5]{2,4}){0,5}(, (\.\.\. )?[\u4e00-\u9fa5]{2,4})?\. $)/,
@@ -280,7 +281,7 @@ const cite_actions = function () {
                 ).join('');
             }
             /** 
-             * @param {Range|Range[]} range
+             * @param {Wps.WpsRange|Wps.WpsRange[]} range
              * @param {RegExp} reg
              */
             function RegExpTest(range, reg, shouldMark = true) {
@@ -298,7 +299,7 @@ const cite_actions = function () {
             }
             function modify_full_text() {
                 //纠正符号
-                $.replaceAll("（）【】，−－–：’？！ ．", "()[],---:'?! .");
+                $.replace_all("（）【】，−－–：’？！ ．', '()[],---:' ? ! .");
                 //删除多余空格/换行
                 sel().Text = sel().Text
                     .replace(/ {2,}/g, ' ')
@@ -307,7 +308,7 @@ const cite_actions = function () {
             function modify_paragraph_text(p_range) {
                 function add_space(collection) {
                     let isExecute = true;
-                    return new Collection_decorator(collection).map(e => {
+                    return new Collection(collection).map(e => {
                         if (hasLink(e.Text)) {
                             if (e.Words.Count === 1) {
                                 isExecute = false;
@@ -326,9 +327,12 @@ const cite_actions = function () {
                     .replaceAll('. . .', '...')
                     .replaceAll(/[\r\n\f\v]{2,}/g, '\r');
             }
+            /**
+             * @param {Range} p_range 
+             */
             function cut_paragraph(p_range) {
                 let authors, date, title, source; //各成分
-                const sentences = new Collection_decorator(p_range.obj.Sentences);
+                const sentences = new Collection(p_range.obj.Sentences);
                 let last_marker = sentences.obj.Count;
                 if (last_marker < 4) {
                     return '这可能是不完整的索引'
@@ -355,12 +359,17 @@ const cite_actions = function () {
                     }
                     break;
                 }
-                if (date) {
-                    return [authors, date, title, source];
+                if (date && authors && title) {
+                    /**@type {[Wps.WpsRange[],Wps.WpsRange,Wps.WpsRange[],Wps.WpsRange]} */
+                    const data = [authors, date, title, source];
+                    return data;
                 } else {
                     return '程序无法获取索引日期'
                 }
             }
+            /**
+             * @param {Range} p_range
+             */
             function set_paragraph(p_range) {
                 modify_paragraph_text(p_range);
                 //分段
@@ -404,7 +413,7 @@ const cite_actions = function () {
                 p_range.set_paragraph_format({ CharacterUnitFirstLineIndent: -2 });
             }
             function set_paragraphs() {
-                const paragraphs = new Collection_decorator(sel().Paragraphs);
+                const paragraphs = new Collection(sel().Paragraphs);
                 paragraphs.map(p => {
                     if ($.is_null_range(p.Range)) { //跳过空行
                         return
@@ -412,7 +421,7 @@ const cite_actions = function () {
                     if ($.has_special_char(p.Range.Text)) { //跳过含有特殊字符的段落
                         return
                     }
-                    const p_range = new Range_decorator(p.Range);
+                    const p_range = new Range(p.Range);
                     try {
                         set_paragraph(p_range);
                     } catch (e) {
@@ -430,23 +439,23 @@ const cite_actions = function () {
             function main() {
                 rbCite_map.clear();
                 modify_full_text();
-                const range = new Range_decorator(sel().Range);
+                const range = new Range(sel().Range);
                 range.del_comment();
                 range.set_font_format({ Size: 9 });
                 console.log('每秒词数：' + sel().Words.Count * 1e3 / timer(set_paragraphs));
             }
             main();
         },
-        matchCites() {
+        match_cites() {
             if ($.is_null_range(sel().Range)) {
                 alert('请先选中正文');
-                return !0;
+                return;
             }
             if (rbCite_map.size === 0) {
                 alert('还没有记录参考文献\n请先检查索引');
-                return !0;
+                return;
             }
-            $.replaceAll('（）', '()');
+            $.replace_all('（）', '()');
             //提取索引
             /**@type {string}*/
             const text = sel().Text;
@@ -479,7 +488,7 @@ const cite_actions = function () {
              */
             function addComments(body_cites, fail_body_cites) {
                 //正文批注
-                const sel_range = new Range_decorator(sel().Range);
+                const sel_range = new Range(sel().Range);
                 sel_range.del_comment();
                 if (body_cites.length === 0) {
                     sel_range.add_comment('这段正文中好像没有索引');
@@ -494,7 +503,7 @@ const cite_actions = function () {
                     if (rbCite_map.get(ref).length !== 0) {
                         return;
                     }
-                    const ref_range = new Range_decorator(ref.range);
+                    const ref_range = new Range(ref.range);
                     ref_range.add_comment('这可能是未被引用的文献\v需要人工核对');
                     //再次查找符合该ref的cites
                     const maybe_body_cites = filter_by_array(
@@ -538,13 +547,15 @@ const cite_actions = function () {
             }
             /**
              * 获取参考文献关键信息
-             * @param {ref[]} refers
-             * @returns {[ref, [author, date]][]}
+             * @param {reference[]} refers
+             * @returns {[reference, [string,string]][]}
              */
             function get_refer_infos(refers) {
                 return refers.map(ref => {
-                    const author = ref.segments[0].match(/^([^,\.]+)/)[1], //abc
-                        date = ref.segments[1].match(/^\((\d{4}[a-z]?)\)/)[1]; //2333a
+                    const author = ref.segments[0].match(/^([^,\.]+)/)?.[1], //abc
+                        date = ref.segments[1].match(/^\((\d{4}[a-z]?)\)/)?.[1]; //2333a
+                    if (!author) throw '无法获取参考文献的作者';
+                    if (!date) throw '无法获取参考文献的日期';
                     return [ref, [author, date]];
                 });
             }
@@ -552,53 +563,53 @@ const cite_actions = function () {
         },
     }
 }();
-const link_actions = function () {
-    let hasCited = true;
-    const get_last_bookmark = () => new Collection_decorator(doc().Bookmarks).at(-1);
-    const get_sel_range = () => new Range_decorator(sel().Range);
+const link = function () {
+    let has_cited = true;
+    const get_last_bookmark = () => new Collection(doc().Bookmarks).at(-1);
+    const get_sel_range = () => new Range(sel().Range);
     return {
-        createLink() {
-            if (!hasCited) { //删除之前没被引用的书签
+        create_link() {
+            if (!has_cited) { //删除之前没被引用的书签
                 get_last_bookmark().Delete();
             }
             if (sel().Type === Enum.wdSelectionNormal) {
                 get_sel_range().add_bookmark();
-                hasCited = false;
+                has_cited = false;
                 alert('创建成功');
             } else {
                 alert('请先选中文本');
             }
         },
-        insertLink() {
+        insert_link() {
             const bookmark = get_last_bookmark();
             if (bookmark) {
                 get_sel_range().cite_bookmark(bookmark);
-                hasCited = true;
+                has_cited = true;
             } else {
                 alert('请先创建文本链接');
             }
         }
     }
 }();
-actions.set(cite_actions, link_actions);
-// 添加撤销组
+const app_step = other.set(cite, link);
+/**
+ * 添加撤销组
+ * @this {()=>void}
+ * @param  {...any} args 
+ * @returns 
+ */
 function step(...args) {
-    wps.UndoRecord.StartCustomRecord('论文_' + this.name);
+    wps.WpsApplication().UndoRecord.StartCustomRecord('论文_' + this.name);
     try {
         this.apply(null, args);
     } catch (e) {
-        new Range_decorator(sel().Range).add_comment('意料外的错误\v请撤销这个操作\v' + e, 'err');
+        new Range(sel().Range).add_comment('意料外的错误\v请撤销这个操作\v' + e, 'err');
         console.error(e);
     }
-    wps.UndoRecord.EndCustomRecord();
+    wps.WpsApplication().UndoRecord.EndCustomRecord();
     return !0
 }
-[
-    'checkCites', 'matchCites',
-    'createLink', 'insertLink',
-    'addFigure', 'addTable', 'addFlowChart',
-    'syntaxParser',
-].forEach(key => {
-    actions[key] = step.bind(actions[key]);
+app_step.each((value, key) => {
+    app_step[key] = step.bind(app_step[key]);
 });
-export default actions;
+export default app_base.set(app_ui, app_step);

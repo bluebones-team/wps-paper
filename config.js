@@ -1,24 +1,27 @@
-const config = {
-    "name": "wps-paper",
-    "version": "v2.0",
-    "comments": {
-        "err": "Σ(ﾟдﾟ;)",
-        "warn": "＞︿＜",
-        "ok": "ヾ(≧▽≦*)o",
-        "info": "(｀・ω・´)"
+export const config = {
+    name: 'wps-paper',
+    version: 'v2.0',
+    comment: {
+        err: 'Σ(ﾟдﾟ;)',
+        warn: '＞︿＜',
+        ok: 'ヾ(≧▽≦*)o',
+        info: '(｀・ω・´)',
     },
-    "urls": {
-        "version": "https://raw.githubusercontent.com/Cubxx/wps-paper/main/config.js",
-        "zip": "https://api.github.com/repos/Cubxx/wps-paper/zipball",
-        "writeResult": "/ui/writeResult.html",
-        "help": {
-            "web": "https://github.com/Cubxx/wps-paper/blob/main/help.md",
-            "local": "/help.md",
-            "video": "https://www.bilibili.com/list/525570753?sid=3253331"
+    update: {
+        v: [
+            'https://raw.gitmirror.com/Cubxx/wps-paper/main/config.js',
+            'https://raw.githubusercontent.com/Cubxx/wps-paper/main/config.js',
+        ],
+        zip: 'https://api.github.com/repos/Cubxx/wps-paper/zipball',
+    },
+    ui: {
+        write_result: {
+            html: '/ui/write_result/index.html',
         },
-        "libs": {
-            "marked": "https://cdnjs.cloudflare.com/ajax/libs/marked/0.6.2/marked.min.js",
-            "mermaid": "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs"
-        }
-    }
-}
+        help: {
+            html: '/ui/help/index.html',
+            md_web: 'https://github.com/Cubxx/wps-paper/blob/main/help.md',
+            video: 'https://www.bilibili.com/list/525570753?sid=3253331',
+        },
+    },
+};

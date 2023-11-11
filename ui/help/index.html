@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8">
+<style>
+    body {
+        background-color: #eee;
+        /* font-family: "微软雅黑" ; */
+        margin: 0;
+        padding: 5;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    body::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* 内容区域 */
+    #md {
+        padding: 15px;
+        border-top: 2px solid;
+    }
+
+    /* md部分 */
+    h1 {
+        border-bottom: 2px solid;
+    }
+
+    a {
+        color: blue;
+        text-decoration: none;
+    }
+
+    blockquote {
+        margin: auto;
+        padding: 1px 40px;
+        font-size: small;
+        color: purple;
+        background-color: #fff;
+    }
+
+    code {
+        color: red;
+        font-weight: bold;
+    }
+
+    table {
+        border-collapse: collapse;
+        color: teal;
+    }
+
+    thead {
+        border-bottom: 1px solid;
+    }
+
+    th,
+    td {
+        padding: 8px;
+    }
+</style>
+<a>视频教程</a>
+<div id="md"></div>
+<script type="module" src="./main.js"></script>
+
+</html>

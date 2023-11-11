@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>撰写结果工具</title>
+    <style>
+        * {
+            font-weight: 900;
+            transition: 300ms;
+        }
+
+        *:disabled {
+            opacity: 0.5;
+        }
+
+        hr {
+            border: 1px solid;
+        }
+
+        body {
+            margin: 20px;
+        }
+
+        input {
+            max-width: 100px;
+            padding: 5px;
+            border-radius: 5px;
+            border: none;
+            font-size: medium;
+            text-align: center;
+            text-overflow: ellipsis;
+            outline: none;
+        }
+
+        input[type='number'] {
+            width: 70px;
+        }
+
+        input[type='button'] {
+            cursor: pointer;
+        }
+
+        input[type='button']:hover {
+            background-color: #ccc;
+        }
+
+        label {
+            display: inline-block;
+            text-align: center;
+            font-size: large;
+            margin: 0 20px;
+        }
+
+        /* 容器样式 */
+        .box {
+            display: flex;
+            width: fit-content;
+            margin-top: 20px;
+            padding: 10px;
+            border: 2px solid;
+            border-radius: 15px;
+        }
+
+        /* base样式 */
+        #base>div[id] {
+            display: flex;
+            flex-direction: column;
+            margin-left: 10px;
+        }
+
+        #base>div[id]>input,
+        #base>div[id]>div[id] {
+            display: flex;
+            flex-wrap: wrap;
+            margin-left: 20px;
+        }
+
+        /* tools样式 */
+        .tools {
+            display: flex;
+            align-items: flex-end;
+        }
+
+        .tool {
+            margin-right: 5px;
+            width: 25px !important;
+            height: 25px;
+            font-size: large;
+            line-height: 10px;
+        }
+
+        /* MSDtable样式 */
+        #MSDtable table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        #MSDtable th,
+        #MSDtable td {
+            border-left: 1px solid;
+            padding: 0;
+            font-size: large;
+            text-align: center;
+        }
+
+        #MSDtable th:first-child,
+        #MSDtable td:first-child {
+            border: 0;
+            padding: 0 20px;
+        }
+
+        /* data样式 */
+        .data div[id]+div {
+            border-top: 1px solid darkgrey;
+        }
+
+        /* editor样式 */
+        .editor {
+            display: flex;
+            /* align-items: center; */
+            flex-direction: column-reverse;
+            justify-content: space-between;
+            padding-left: 10px;
+            border-left: 1px solid;
+        }
+
+        .editor input {
+            width: 80px;
+            border-radius: 5px;
+        }
+
+        .editor textarea {
+            padding: 5px;
+            border-radius: 5px;
+            border: 1px solid;
+            outline: none;
+            transition: none;
+        }
+
+        /* 输出 */
+        #output {
+            max-width: 800px;
+        }
+
+        #output .data {
+            padding: 10px;
+            outline: none;
+            background-color: #fff;
+            user-select: none;
+        }
+
+        /* 附加工具 */
+        #app-tools {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+        }
+
+        #app-tools>* {
+            display: inline-block;
+            margin: 0 5px;
+            padding: 5px;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        #app-tools>input {
+            width: 32px;
+            height: 32px;
+            background-color: #888;
+        }
+
+        #app-tools>input[title=夜间] {
+            -webkit-mask-box-image: url(../../svg/moon.svg);
+        }
+
+        #app-tools>input[title=设置] {
+            -webkit-mask-box-image: url(../../svg/setting.svg);
+        }
+
+        #app-tools>input[title=输出] {
+            -webkit-mask-box-image: url(../../svg/right.svg);
+        }
+
+        #error {
+            color: red;
+            font: menu;
+            list-style-type: none;
+            flex: 1;
+            text-align: left;
+        }
+
+        #error li {
+            display: block;
+            padding: 0;
+        }
+
+        /* app-db */
+        #app-db {
+            display: none;
+            list-style-type: none;
+        }
+
+        #app-db li {
+            display: flex;
+            justify-content: space-between;
+            width: 200px;
+        }
+
+        #app-db input {
+            padding: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app-tools">
+        <input type="button" title="设置">
+        <input type="button" title="夜间">
+        <input type="button" title="输出" style="display: none;">
+        <select id="mode" autofocus style="border: 2px solid;"></select>
+        <ul id="error" onclick="this.innerHTML=''" title="单击删除"></ul>
+    </div>
+    <ul id="app-db" class="box"></ul>
+    <script src="./util.js"></script>
+    <script src="./proto.js"></script>
+    <script src="./Mode.js"></script>
+    <script type="module" src="./main.js"></script>
+</body>
+
+</html>

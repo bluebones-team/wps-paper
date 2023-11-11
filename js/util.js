@@ -1,16 +1,10 @@
-export const sel = () => wps.Selection;
-export const doc = () => wps.ActiveDocument;
-export const Enum = window.wps?.Enum;
+export const sel = () => wps.WpsApplication().Selection;
+export const doc = () => wps.WpsApplication().ActiveDocument;
+export const Enum = wps.Enum;
 export const $ = {
-    open_url_in_local(url) {
-        if (url[0] === '/') {
-            url = location.origin + url;
-        }
-        wps.OAAssist.ShellExecute(url);
-    },
-    open_url_in_wps(url, caption, width, height) {
-        wps.ShowDialog(url, caption, width, height, true);
-    },
+    /**
+     * @param {Wps.WpsRange} range 
+     */
     is_null_range(range) {
         const char_num = range.Text.length;
         switch (char_num) {
@@ -19,15 +13,18 @@ export const $ = {
             default: return false;
         }
     },
+    /**
+     * @param {string} text 
+     */
     has_special_char(text) {
-        return wps.CleanString(text) !== text
+        return wps.WpsApplication().CleanString(text) !== text
     },
     /**
      * 批量替换文本
-     * @param {Iterable<string>} oldTexts 
-     * @param {Iterable<string>} newTexts 
+     * @param {string|string[]} oldTexts 
+     * @param {string|string[]} newTexts 
      */
-    replaceAll(oldTexts, newTexts, range = sel().Range) {
+    replace_all(oldTexts, newTexts, range = sel().Range) {
         if (oldTexts.length != newTexts.length) {
             throw '查找数组和替换数组的长度不匹配';
         }
@@ -36,9 +33,13 @@ export const $ = {
         }
     },
 };
-/**
- * 同时修改多个属性
- */
 Object.prototype.set = function (...configs) {
     return Object.assign(this, ...configs);
+};
+Object.prototype.each = function (fn) {
+    for (const key in this) {
+        if (Object.hasOwnProperty.call(this, key)) {
+            fn(this[key], key, this);
+        }
+    }
 };
