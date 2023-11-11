@@ -33,7 +33,7 @@ def copy_dir(old_dir: str, new_dir: str):
     parent_dir = os.path.dirname(new_dir)
     remove_dir(parent_dir)
     logging.info('复制文件夹')
-    ignore_patterns = ['.git', THIS_NAME]
+    ignore_patterns = ['.git', '*.log', 'README.md', THIS_NAME]
     if os.path.exists('.gitignore'):
         with open('.gitignore', encoding='utf-8') as f:
             ignore_patterns += f.read().split('\n')
