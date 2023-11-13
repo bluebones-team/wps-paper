@@ -12,22 +12,7 @@ const app_base = {
         return !0;
     },
     update() {
-        loads_orderly(config.update.v, load_fetch)
-            .then(async res => {
-                const text = await res.text();
-                const version = text.match(/version: '([\s\S]+?)'/)?.[1];
-                if (version === void 0) {
-                    return alert('更新失败: 无法获取版本号');
-                }
-                if (config.version === version) {
-                    alert('已是最新版');
-                } else if (confirm(`最新版: ${version}\n是否下载?`)) {
-                    open_url_in_local(config.update.zip);
-                }
-            }).catch(err => {
-                console.error(err);
-                alert('更新失败: 请尝试科学上网');
-            });
+        open_url_in_wps(config.ui.update.html, '更新', 550, 150);
         return !0;
     },
     test() {
@@ -37,6 +22,7 @@ const app_base = {
 const app_ui = {
     write_result() {
         open_url_in_wps(config.ui.write_result.html, '撰写结果工具', 900, 550);
+        // open_url_in_local(config.ui.write_result.html);
         return !0;
     },
     show_help() {
@@ -299,7 +285,7 @@ const cite = function () {
             }
             function modify_full_text() {
                 //纠正符号
-                $.replace_all("（）【】，−－–：’？！ ．', '()[],---:' ? ! .");
+                $.replace_all("（）【】，−－–：’？！ ．", "()[],---:' ? ! .");
                 //删除多余空格/换行
                 sel().Text = sel().Text
                     .replace(/ {2,}/g, ' ')
@@ -565,12 +551,12 @@ const cite = function () {
 }();
 const link = function () {
     let has_cited = true;
-    const get_last_bookmark = () => new Collection(doc().Bookmarks).at(-1);
+    const get_last_bookmark = () => doc().Bookmarks.Count ? new Collection(doc().Bookmarks).at(-1) : void 0;
     const get_sel_range = () => new Range(sel().Range);
     return {
         create_link() {
             if (!has_cited) { //删除之前没被引用的书签
-                get_last_bookmark().Delete();
+                get_last_bookmark()?.Delete();
             }
             if (sel().Type === Enum.wdSelectionNormal) {
                 get_sel_range().add_bookmark();

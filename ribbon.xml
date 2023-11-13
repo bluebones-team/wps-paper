@@ -3,23 +3,23 @@
         <tabs>
             <tab id="paper" label="论文">
                 <group id="r" label="参考文献">
-                    <button id="r1" onAction="UI.fn" imageMso="Spelling" size="large" getLabel="UI.Label" getScreentip="UI.Screentip" getSupertip="UI.Supertip"/>
-                    <button id="r2" onAction="UI.fn" imageMso="FormControlCheckBox" size="large" getLabel="UI.Label" getScreentip="UI.Screentip" getSupertip="UI.Supertip"/>
+                    <button id="r1" onAction="UI.fn" imageMso="Spelling" size="large" getEnabled="UI.Enabled" getLabel="UI.Label" getScreentip="UI.Screentip" getSupertip="UI.Supertip"/>
+                    <button id="r2" onAction="UI.fn" imageMso="FormControlCheckBox" size="large" getEnabled="UI.Enabled" getLabel="UI.Label" getScreentip="UI.Screentip" getSupertip="UI.Supertip"/>
                 </group>
                 <group id="w" label="结果">
-                    <button id="w1" onAction="UI.fn" imageMso="CharacterBorder" size="large" getLabel="UI.Label" getScreentip="UI.Screentip" getSupertip="UI.Supertip"/>
-                    <button id="w2" onAction="UI.fn" imageMso="Text" size="small" getLabel="UI.Label" getScreentip="UI.Screentip" getSupertip="UI.Supertip"/>
-                    <button id="w3" onAction="UI.fn" imageMso="HyperlinkInsert" size="small" getLabel="UI.Label" getScreentip="UI.Screentip" getSupertip="UI.Supertip"/>
+                    <button id="w1" onAction="UI.fn" imageMso="CharacterBorder" size="large" getEnabled="UI.Enabled" getLabel="UI.Label" getScreentip="UI.Screentip" getSupertip="UI.Supertip"/>
+                    <button id="w2" onAction="UI.fn" imageMso="Text" size="small" getEnabled="UI.Enabled" getLabel="UI.Label" getScreentip="UI.Screentip" getSupertip="UI.Supertip"/>
+                    <button id="w3" onAction="UI.fn" imageMso="HyperlinkInsert" size="small" getEnabled="UI.Enabled" getLabel="UI.Label" getScreentip="UI.Screentip" getSupertip="UI.Supertip"/>
                 </group>
                 <group id="c" label="图表">
-                    <button id="c1" onAction="UI.fn" imageMso="ChartInsert" size="small" getLabel="UI.Label" getScreentip="UI.Screentip" getSupertip="UI.Supertip"/>
-                    <button id="c2" onAction="UI.fn" imageMso="TableEraser" size="small" getLabel="UI.Label" getScreentip="UI.Screentip" getSupertip="UI.Supertip"/>
-                    <button id="" onAction="UI.fn" imageMso="TracePrecedents" size="large" getLabel="UI.Label" getScreentip="UI.Screentip" getSupertip="UI.Supertip"/>
+                    <button id="c1" onAction="UI.fn" imageMso="ChartInsert" size="small" getEnabled="UI.Enabled" getLabel="UI.Label" getScreentip="UI.Screentip" getSupertip="UI.Supertip"/>
+                    <button id="c2" onAction="UI.fn" imageMso="TableEraser" size="small" getEnabled="UI.Enabled" getLabel="UI.Label" getScreentip="UI.Screentip" getSupertip="UI.Supertip"/>
+                    <button id="" onAction="UI.fn" imageMso="TracePrecedents" size="large" getEnabled="UI.Enabled" getLabel="UI.Label" getScreentip="UI.Screentip" getSupertip="UI.Supertip"/>
                 </group>
                 <group id="o" label="其他">
-                    <button id="o1" onAction="UI.fn" imageMso="XmlStructure" size="large" getLabel="UI.Label" getScreentip="UI.Screentip" getSupertip="UI.Supertip"/>
-                    <button id="o2" onAction="UI.fn" imageMso="Help" size="small" getLabel="UI.Label" getScreentip="UI.Screentip" getSupertip="UI.Supertip"/>
-                    <button id="o3" onAction="UI.fn" imageMso="WindowNew" size="small" getLabel="UI.Label" getScreentip="UI.Screentip" getSupertip="UI.Supertip"/>
+                    <button id="o1" onAction="UI.fn" imageMso="XmlStructure" size="large" getEnabled="UI.Enabled" getLabel="UI.Label" getScreentip="UI.Screentip" getSupertip="UI.Supertip"/>
+                    <button id="o2" onAction="UI.fn" imageMso="Help" size="small" getEnabled="UI.Enabled" getLabel="UI.Label" getScreentip="UI.Screentip" getSupertip="UI.Supertip"/>
+                    <button id="o3" onAction="UI.fn" imageMso="WindowNew" size="small" getEnabled="UI.Enabled" getLabel="UI.Label" getScreentip="UI.Screentip" getSupertip="UI.Supertip"/>
                 </group>
             </tab>
         </tabs>

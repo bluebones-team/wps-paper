@@ -1,0 +1,38 @@
+<meta charset="utf-8">
+<progress></progress>
+<div></div>
+<script type="module">
+    import { config } from '../../config.js';
+    import { load_fetch, loads_orderly } from '../../lib/web.js';
+
+    const u = config.ui.update;
+    const s = t => c.innerText = t;
+    const a = t => document.querySelector(t);
+    const p = a('progress');
+    const c = a('div');
+    c.innerText = '加载中...';
+    p.value = 0;
+    try {
+        const r = await loads_orderly(u.v, url => {
+            p.value += p.max * 0.3;
+            console.log(url);
+            return load_fetch(url, abort => setTimeout(abort, 3e3));
+        });
+        const t = await r.text();
+        p.value = p.max;
+        const old_v = config.version;
+        const new_v = t.match(/version: '([^ ]+?)'/)?.[1];
+        if (new_v === void 0) {
+            console.error(t);
+            s('更新失败: 无法获取版本号');
+        } else if (old_v === new_v) {
+            s(`当前版本: ${old_v}\n已是最新版`);
+        } else {
+            // confirm(`当前版本: ${old_v}\n最新版: ${new_v}\n是否下载?`) && open(u.zip);
+            s(`当前版本: ${old_v}\n最新版: ${new_v}\n下载地址: ${u.zip}\n请复制到浏览器中打开`)
+        }
+    } catch (e) {
+        console.error(e);
+        s('更新失败: 请尝试科学上网');
+    }
+</script>

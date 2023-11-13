@@ -20,10 +20,24 @@ Expand(1, Object.prototype, {
         this[k] = L ? b : a;
         return L
     },
+    each(fn) {
+        for (let key in this) {
+            if (Object.hasOwnProperty.call(this, key)) {
+                fn(this[key], key, this);
+            }
+        }
+    },
 });
 Expand(1, Array.prototype, {
-    mean(key) {
-        return this.reduce((sum, e) => sum + e) / this.length
+    mean() {
+        const obj = {};
+        this.forEach(e => {
+            e.each((value, key) => {
+                obj[key] = (obj[key] ?? 0) + value;
+            });
+        });
+        obj.each((v, k) => { obj[k] = v / this.length });
+        return obj;
     },
     choose(size) {
         var allResult = [];

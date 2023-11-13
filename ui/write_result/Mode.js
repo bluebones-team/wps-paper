@@ -36,10 +36,12 @@ const op = {
     }
 };
 class Mode {
-    constructor(name, boxes, config = {}) {
-        this.boxes = boxes;
+    constructor(name) {
         Mode[Mode.length++] = this;
         $('#mode').innerHTML += `<option>${name}</option>`;
+    }
+    /**@param {Record<string,{}>} config */
+    set config(config) {
         Object.keys(config).forEach(k => this[k] = config[k]);
     }
     init() {
@@ -163,138 +165,136 @@ class Mode {
         $('#base ~ .box', 1).forEach(e => e.remove());
     }
 }
-new Mode('差异检验', [
-    {
-        id: 'base',
-        innerHTML: `<div id="dep"><input id="d1" type="text" placeholder="因变量"></div>
+new Mode('差异检验').config = {
+    boxes: [
+        {
+            id: 'base',
+            innerHTML: `<div id="dep"><input id="d1" type="text" placeholder="因变量"></div>
                     <div id="indep"><div id="i1">
                         <input class="name" type="text" placeholder="自变量">
                         <input class="level" type="text" placeholder="水平1">
                         <input class="level" type="text" placeholder="水平2">
                     </div></div>`,
-        datas() { return $('#indep').$('div', 1); },
-        confirm() {
-            Mode.update();
-            this.Mode.addBox('MSDtable');
-            (is.length + i1.ls.length == 3)
-                ? this.Mode.addBox('Ttest')
-                : this.Mode.addBox('Ftest');
-        },
-        output() {
-            let method = '';
-            if (is.length == 1 && i1.ls.length == 2 && ds.length == 1) method = `t检验`;
-            else {
-                method = `${'0单双'[is.length] || '多'}因素`;
-                if (ds.length > 1) method += '多元';
-                method += '方差分析';
-            }
-            const indepInfo = is.map(({ name, ls }) => `${ls.length}(${name}: ${ls.join(' / ')})`);
-            return `对${ds.map(e => e.name).join('、')}采用${is.length > 1 ? indepInfo.join('×') : ''}${method}。结果发现，`
-
-        },
-        initFunc() {
-            $('#dep').addTools(1);
-            $('#indep').addTools(2); // 当前MSD表格只能存储2个自变量的数据
-            $('#i1').addTools(5, 3);
-        }
-    },
-    {
-        id: 'MSDtable',
-        innerHTML: `<table class="data"></table>`,
-        datas() { return [...this.$('.data').$('tbody').children] },
-        confirm() {
-            const dataArr = this.datas().map(e => {
-                const row = e.$('.MSD', 1).map(ee => ({
-                    M: parseFloat(ee.children[0].value),
-                    SD: parseFloat(ee.children[1].value),
-                }));
-                return [...row, { M: row.mean('M'), SD: row.mean('SD') }]
-            });
-            const i2 = window['i2'] || { ls: [] };
-            this.MSDdata = {
-                rows: [...i2.ls, 'mean'],
-                columns: [...i1.ls, 'mean'],
-                data: [...dataArr, dataArr[0].map((e, i) => ({
-                    M: dataArr.map(ee => ee[i]).mean('M'),
-                    SD: dataArr.map(ee => ee[i]).mean('SD')
-                }))],
-            };
-        },
-        update() {
-            const i2 = window['i2'] || { name: '', ls: [''] };
-            const head =
-                `<tr><th>${i2.name}\\${i1.name}</th>`
-                + i1.ls.map((e, i) =>
-                    `<th id="i1l${i + 1}">${e}</th>`
-                ).join('') + '</tr>';
-            const body = i2.ls.map((e, i) =>
-                `<tr><td id="i2l${i + 1}">${e}</td>`
-                + i1.ls.map((ee, j) =>
-                    this.dataElm(`i2l${i + 1}&i1l${j + 1}_MSD`, 'M,SD', {
-                        tag: 'td',
-                        className: 'MSD',
-                    })).join('') + '</tr>'
-            ).join('');
-            return `<thead>${head}</thead><tbody>${body}</tbody>`;
-        },
-    },
-    {
-        id: 'Ttest',
-        confirm() { this.datas().map(this.writeData) },
-        update() {
-            return this.dataElm('i1_Ttest', 't,df,p,CohenD|Cohen d,ciL|CI下限,ciU|CI上限', {
-                elms: [{
-                    elm: `<label>${i1.name}</label>`,
-                }]
-            });
-        },
-        output() {
-            return (function ({ ls, t, df, p, CohenD, ciL, ciU }) {
-                const [l1, l2] = ls;
-                const msd1 = op.MSD(l1),
-                    msd2 = op.MSD(l2);
-                return `${op.sign(p, l1, l2, msd1, msd2)}, t(${df}) = ${t.toFixed(2)}, ${op.ifRes('p***', p)}, Cohen d = ${CohenD.toFixed(2)}, 90%CI[${`${ciL.toFixed(2)}, ${ciU.toFixed(2)}`}]。`
-            })(i1);
-        }
-    },
-    {
-        id: 'Ftest',
-        confirm() {
-            $('.post,.simple', 1).forEach(e => e.remove());
-            this.is = this.datas().map(e => {
-                const i = this.writeData(e);
-                const { p, id, ls } = i;
-                if (p < 0.05) {
-                    if (id.includes('×')) Mode.addBox(this.Mode['simple'](id));
-                    else if (ls.length > 2) Mode.addBox(this.Mode['post'](id));
+            datas() { return $('#indep').$('div', 1); },
+            confirm() {
+                Mode.update();
+                this.Mode.addBox('MSDtable');
+                (is.length + i1.ls.length == 3)
+                    ? this.Mode.addBox('Ttest')
+                    : this.Mode.addBox('Ftest');
+            },
+            output() {
+                let method = '';
+                if (is.length == 1 && i1.ls.length == 2 && ds.length == 1) method = `t检验`;
+                else {
+                    method = `${'0单双'[is.length] || '多'}因素`;
+                    if (ds.length > 1) method += '多元';
+                    method += '方差分析';
                 }
-                return i;
-            });
+                const indepInfo = is.map(({ name, ls }) => `${ls.length}(${name}: ${ls.join(' / ')})`);
+                return `对${ds.map(e => e.name).join('、')}采用${is.length > 1 ? indepInfo.join('×') : ''}${method}。结果发现，`
+
+            },
+            initFunc() {
+                $('#dep').addTools(1);
+                $('#indep').addTools(2); // 当前MSD表格只能存储2个自变量的数据
+                $('#i1').addTools(5, 3);
+            }
         },
-        update() {
-            return is.flatMap((e, i) =>
-                is.choose(i + 1).map(es => {
-                    const id = es.map(e => e.id).join('×');
-                    if (i > 0) window[id] = {
-                        id,
-                        name: es.map(e => e.name).join('×'),
-                        is: es,
-                    };
-                    return this.dataElm(`${id}_Ftest`, 'F,df1,df2,p,eta2|η2,ciL|CI下限,ciU|CI上限', {
-                        elms: [{
-                            elm: `<label>${window[id].name}</label>`,
-                        }]
-                    });
-                })
-            ).join('');
+        {
+            id: 'MSDtable',
+            innerHTML: `<table class="data"></table>`,
+            datas() { return [...this.$('.data').$('tbody').children] },
+            confirm() {
+                const dataArr = this.datas().map(e => {
+                    const row = e.$('.MSD', 1).map(ee => ({
+                        M: parseFloat(ee.children[0].value),
+                        SD: parseFloat(ee.children[1].value),
+                    }));
+                    return [...row, row.mean()]
+                });
+                const i2 = window['i2'] || { ls: [] };
+                this.MSDdata = {
+                    rows: [...i2.ls, 'mean'],
+                    columns: [...i1.ls, 'mean'],
+                    data: [...dataArr, dataArr[0].map((e, i) => dataArr.map(ee => ee[i]).mean())],
+                };
+            },
+            update() {
+                const i2 = window['i2'] || { name: '', ls: [''] };
+                const head =
+                    `<tr><th>${i2.name}\\${i1.name}</th>`
+                    + i1.ls.map((e, i) =>
+                        `<th id="i1l${i + 1}">${e}</th>`
+                    ).join('') + '</tr>';
+                const body = i2.ls.map((e, i) =>
+                    `<tr><td id="i2l${i + 1}">${e}</td>`
+                    + i1.ls.map((ee, j) =>
+                        this.dataElm(`i2l${i + 1}&i1l${j + 1}_MSD`, 'M,SD', {
+                            tag: 'td',
+                            className: 'MSD',
+                        })).join('') + '</tr>'
+                ).join('');
+                return `<thead>${head}</thead><tbody>${body}</tbody>`;
+            },
         },
-        output() {
-            return this.is.map(({ name, F, df1, df2, p, eta2, ciL, ciU }) =>
-                `${op.ifRes('ia', name)}${op.ifRes('p*', p)}, F(${df1}, ${df2}) = ${F.toFixed(2)}, ${op.ifRes('p***', p)}, η2 = ${eta2.toFixed(2)}, 90%CI[${`${ciL.toFixed(2)}, ${ciU.toFixed(2)}`}]`
-            ).join('；') + '。';
+        {
+            id: 'Ttest',
+            confirm() { this.datas().map(this.writeData) },
+            update() {
+                return this.dataElm('i1_Ttest', 't,df,p,CohenD|Cohen d,ciL|CI下限,ciU|CI上限', {
+                    elms: [{
+                        elm: `<label>${i1.name}</label>`,
+                    }]
+                });
+            },
+            output() {
+                return (function ({ ls, t, df, p, CohenD, ciL, ciU }) {
+                    const [l1, l2] = ls;
+                    const msd1 = op.MSD(l1),
+                        msd2 = op.MSD(l2);
+                    return `${op.sign(p, l1, l2, msd1, msd2)}, t(${df}) = ${t.toFixed(2)}, ${op.ifRes('p***', p)}, Cohen d = ${CohenD.toFixed(2)}, 90%CI[${`${ciL.toFixed(2)}, ${ciU.toFixed(2)}`}]。`
+                })(i1);
+            }
         },
-    },
-], {
+        {
+            id: 'Ftest',
+            confirm() {
+                $('.post,.simple', 1).forEach(e => e.remove());
+                this.is = this.datas().map(e => {
+                    const i = this.writeData(e);
+                    const { p, id, ls } = i;
+                    if (p < 0.05) {
+                        if (id.includes('×')) Mode.addBox(this.Mode['simple'](id));
+                        else if (ls.length > 2) Mode.addBox(this.Mode['post'](id));
+                    }
+                    return i;
+                });
+            },
+            update() {
+                return is.flatMap((e, i) =>
+                    is.choose(i + 1).map(es => {
+                        const id = es.map(e => e.id).join('×');
+                        if (i > 0) window[id] = {
+                            id,
+                            name: es.map(e => e.name).join('×'),
+                            is: es,
+                        };
+                        return this.dataElm(`${id}_Ftest`, 'F,df1,df2,p,eta2|η2,ciL|CI下限,ciU|CI上限', {
+                            elms: [{
+                                elm: `<label>${window[id].name}</label>`,
+                            }]
+                        });
+                    })
+                ).join('');
+            },
+            output() {
+                return this.is.map(({ name, F, df1, df2, p, eta2, ciL, ciU }) =>
+                    `${op.ifRes('ia', name)}${op.ifRes('p*', p)}, F(${df1}, ${df2}) = ${F.toFixed(2)}, ${op.ifRes('p***', p)}, η2 = ${eta2.toFixed(2)}, 90%CI[${`${ciL.toFixed(2)}, ${ciU.toFixed(2)}`}]`
+                ).join('；') + '。';
+            },
+        },
+    ],
     post(id) {
         return {
             i: window[id],
@@ -357,8 +357,8 @@ new Mode('差异检验', [
             initFunc() { this.$('textarea').style.display = 'none'; },
         }
     },
-});
-new Mode('线性回归', [
+};
+new Mode('线性回归').boxes = [
     {
         id: 'base',
         innerHTML: `<div id="dep"><input id="d1" type="text" placeholder="因变量"></div>
@@ -413,8 +413,8 @@ new Mode('线性回归', [
             ).join('；') + '。';
         },
     }
-]);
-new Mode('中介模型', [
+];
+new Mode('中介模型').boxes = [
     {
         id: 'base',
         innerHTML: `<div id="dep"><input id="d1" type="text" placeholder="因变量"></div>
@@ -482,8 +482,8 @@ new Mode('中介模型', [
             ).join('；') + '。';
         },
     }
-]);
-new Mode('调节模型', [
+];
+new Mode('调节模型').boxes = [
     {
         id: 'base',
         innerHTML: `<div id="dep"><input id="d1" type="text" placeholder="因变量"></div>
@@ -551,4 +551,4 @@ new Mode('调节模型', [
             this.editor.$('textarea').style.display = 'none';
         },
     }
-]);
+];

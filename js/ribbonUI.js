@@ -5,10 +5,11 @@ export default (function (UI) {
         'Label',
         'Screentip',
         'Supertip',
+        'Enabled',
         'fn',
     ].forEach(prop => {
         UI[prop] = function ({ Id }) {
-            const value = UI.controls[Id]?.[prop] ?? '';
+            const value = UI.controls[Id]?.[prop] ?? true;
             return typeof value === 'function' ? value() : value;
         };
     });
@@ -24,7 +25,7 @@ export default (function (UI) {
         },
         r2: {
             Label: '核对索引',
-            Screentip: '核对正文索引和参考文献列表是否一一对应',
+            Screentip: '核对正文索引和参考文献列表是否对应',
             Supertip: '请先选中正文',
             fn: app.match_cites,
         },
@@ -50,6 +51,7 @@ export default (function (UI) {
             Label: '作图',
             Screentip: '',
             Supertip: '',
+            Enabled: false,
             fn: app.add_figure,
         },
         c2: {
