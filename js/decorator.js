@@ -1,19 +1,19 @@
-import { doc, Enum } from "./util.js";
-import { config } from '../config.js'
+import { doc, Enum } from './util.js';
+import { config } from '../config.js';
 /**
  * 自定义集合
  * @template {{Count:number,Item(index:number):ReturnType<T['Item']>}} T
  */
 class Collection {
     /**
-     * @param {T} obj 
+     * @param {T} obj
      */
     constructor(obj) {
         this.obj = obj;
     }
     /**
      * @template R
-     * @param {(item:ReturnType<T['Item']>,index:number,obj:T)=>R} fn 
+     * @param {(item:ReturnType<T['Item']>,index:number,obj:T)=>R} fn
      * @param {boolean} order true：正序
      */
     map(fn, order = false) {
@@ -30,10 +30,8 @@ class Collection {
      */
     at(index) {
         const len = this.obj.Count;
-        if (index >= 0 && index < len)
-            return this.obj.Item(index + 1);
-        if (index < 0 && index >= -len)
-            return this.obj.Item(len + index + 1);
+        if (index >= 0 && index < len) return this.obj.Item(index + 1);
+        if (index < 0 && index >= -len) return this.obj.Item(len + index + 1);
         throw '索引超过集合长度';
     }
     /**
@@ -61,7 +59,7 @@ const comment_values = new Set(Object.values(config.comment));
 /**自定义Range */
 class Range {
     /**
-     * @param {Wps.WpsRange} obj 
+     * @param {Wps.WpsRange} obj
      */
     constructor(obj) {
         this.obj = obj;
@@ -75,13 +73,13 @@ class Range {
         });
     }
     del_comment() {
-        new Collection(this.obj.Comments).map(e => {
+        new Collection(this.obj.Comments).map((e) => {
             if (comment_values.has(e.Author)) {
                 e.Delete();
             }
         });
     }
-    add_bookmark(name = `_link_${+new Date()}`) {
+    add_bookmark(name = `_wps_paper_link_${+new Date()}`) {
         return doc().Bookmarks.Add(name, this.obj);
     }
     /**
@@ -93,7 +91,7 @@ class Range {
         field.Update();
     }
     /**
-     * @param {Partial<Wps.WpsFont>} config 
+     * @param {Partial<Wps.WpsFont>} config
      */
     set_font_format(config = {}) {
         this.obj.HighlightColorIndex = Enum.wdNoHighlight;
@@ -103,9 +101,9 @@ class Range {
             Italic: 0,
             Color: Enum.wdColorAutomatic, //自动配色
             Name: '',
-            NameAscii: "Times New Roman",
-            NameFarEast: "宋体",
-            NameOther: "Times New Roman",
+            NameAscii: 'Times New Roman',
+            NameFarEast: '宋体',
+            NameOther: 'Times New Roman',
         }).set(config);
     }
     set_paragraph_format(config = {}) {
@@ -134,13 +132,13 @@ class Range {
      */
     progressive_search(name, fn) {
         const names = ['Sentences', 'Words', 'Characters'];
-        !function recur(collection, recur_num) {
+        !(function recur(collection, recur_num) {
             return new Collection(collection).map((e, i, arr) => {
                 if (fn(e, i, arr)) {
                     recur(e[names[recur_num + 1]], recur_num + 1);
                 }
             });
-        }(this.obj[name], names.indexOf(name));
+        })(this.obj[name], names.indexOf(name));
     }
 }
-export { Collection, Range }
+export { Collection, Range };

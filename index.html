@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html>
-<meta charset="utf-8">
-<script type="module">
-    import { sel, doc, $ } from './js/util.js'
-    import UI from './js/ribbonUI.js'
-    import app from './js/ribbon.js'
-    import { Collection, Range } from './js/decorator.js';
-    window.set({ sel, doc, $, UI, app, Collection, Range, });
-</script>
-
+    <meta charset="utf-8" />
+    <script>
+        window.UI ??= {};
+    </script>
+    <script type="module">
+        import { sel, doc, $ } from './js/util.js';
+        import UI from './js/ribbonUI.js';
+        import app from './js/ribbon.js';
+        import { Collection, Range } from './js/decorator.js';
+        window.set({ sel, doc, $, UI, app, Collection, Range });
+    </script>
 </html>

@@ -643,29 +643,22 @@ const cite = (function () {
     };
 })();
 const link = (function () {
-    let has_cited = true;
-    const get_last_bookmark = () =>
-        doc().Bookmarks.Count ? new Collection(doc().Bookmarks).at(-1) : void 0;
+    let cur_bookmark;
     const get_sel_range = () => new Range(sel().Range);
     return {
         create_link() {
-            if (!has_cited) {
-                //删除之前没被引用的书签
-                get_last_bookmark()?.Delete();
-            }
+            cur_bookmark?.Delete(); //删除之前没被引用的书签
             if (sel().Type === Enum.wdSelectionNormal) {
-                get_sel_range().add_bookmark();
-                has_cited = false;
+                cur_bookmark = get_sel_range().add_bookmark();
                 alert('创建成功');
             } else {
                 alert('请先选中文本');
             }
         },
         insert_link() {
-            const bookmark = get_last_bookmark();
-            if (bookmark) {
-                get_sel_range().cite_bookmark(bookmark);
-                has_cited = true;
+            if (cur_bookmark) {
+                get_sel_range().cite_bookmark(cur_bookmark);
+                cur_bookmark = null;
             } else {
                 alert('请先创建文本链接');
             }

@@ -1,13 +1,7 @@
-import { config } from '../config.js'
-import app from './ribbon.js'
+import { config } from '../config.js';
+import app from './ribbon.js';
 export default (function (UI) {
-    [
-        'Label',
-        'Screentip',
-        'Supertip',
-        'Enabled',
-        'fn',
-    ].forEach(prop => {
+    ['Label', 'Screentip', 'Supertip', 'Enabled', 'fn'].forEach((prop) => {
         UI[prop] = function ({ Id }) {
             const value = UI.controls[Id]?.[prop] ?? true;
             return typeof value === 'function' ? value() : value;
@@ -51,7 +45,7 @@ export default (function (UI) {
             Label: '作图',
             Screentip: '',
             Supertip: '',
-            Enabled: false,
+            // Enabled: false,
             fn: app.add_figure,
         },
         c2: {
