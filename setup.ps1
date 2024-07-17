@@ -1,6 +1,8 @@
+# -*- coding: utf-8 -*-
 # PowerShell >= 5.0
+
 $FILE = $MyInvocation.MyCommand.Path
-$JSADDON_DIR = "$env:APPDATA/kingsoft/wps/jsaddons"
+$JSADDON_DIR = Join-Path $env:APPDATA "kingsoft/wps/jsaddons"
 $XML_PATH = Join-Path $JSADDON_DIR "publish.xml"
 $ADDON_NAME = $null
 $NAME = $null
@@ -13,11 +15,11 @@ function Get-AddonInfo($Path) {
     if ($nameMatch -and $versionMatch) {
         $name = $nameMatch.Groups[1].Value
         $version = $versionMatch.Groups[1].Value
-        Write-Host "获取名称和版本号: $name, $version"
+        Write-Host "Get name and version: $name, $version"
         return $name, $version
     }
     else {
-        throw "获取名称和版本号失败"
+        throw "Failed to get name and version"
     }
 }
 function Copy-Dir($OldDir, $NewDir) {
@@ -27,7 +29,7 @@ function Copy-Dir($OldDir, $NewDir) {
         $ignorePatterns += Get-Content ".gitignore"
     }
     Copy-Item -Path $OldDir -Destination $NewDir -Recurse -Force -Exclude $ignorePatterns
-    Write-Host "将 $OldDir 复制到 $NewDir"
+    Write-Host "Copy '$OldDir' to '$NewDir'"
 }
 function Add-XML() {
     if (-not (Test-Path $XML_PATH)) {
@@ -44,7 +46,7 @@ function Add-XML() {
     $newNode.SetAttribute("url", "https://api.github.com/repos/Cubxx/wps-paper/zipball")
     $newNode.SetAttribute("version", $VERSION)
     $xml.DocumentElement.AppendChild($newNode)
-    Write-Host "添加注册信息 $($newNode.OuterXml)"
+    Write-Host "Add registration info: $($newNode.OuterXml)"
     $xml.Save($XML_PATH)
 }
 function Remove-Dir() {
@@ -52,28 +54,28 @@ function Remove-Dir() {
         ($_.Name -like "$($NAME)_*") -and (Test-Path $_.FullName -PathType Container)
     }
     if ($dirs.Count -eq 0) {
-        Write-Host "找不到旧文件夹，无需删除"
+        Write-Host "Can't find old folder, no need to delete"
         return
     }
     foreach ($e in $dirs) {
         Remove-Item -Path $e.FullName -Recurse -Force
-        Write-Host "已删除旧文件夹: $($e.Name)"
+        Write-Host "Remove old folder: $($e.Name)"
     }
 }
 function Remove-XML() {
     if (-not (Test-Path $XML_PATH)) {
-        Write-Host "找不到注册信息，无需删除"
+        Write-Host "Can't find registration info, no need to delete"
         return
     }
     $xml = [xml](Get-Content $XML_PATH)
     $nodes = $xml.SelectNodes("//jsplugin[@name=""$NAME""]")
     if ($nodes.Count -eq 0) {
-        Write-Host "找不到注册信息，无需删除"
+        Write-Host "Can't find registration info, no need to delete"
         return
     }
     foreach ($node in $nodes) {
         $xml.DocumentElement.RemoveChild($node)
-        Write-Host "已删除注册信息 $($node.OuterXml)"
+        Write-Host "Remove registration info: $($node.OuterXml)"
     }
     $xml.Save($XML_PATH)
 }
@@ -106,46 +108,46 @@ function Install-Addon($srcDir) {
     $targetDir = Join-Path $JSADDON_DIR $ADDON_NAME
     Copy-Dir $srcDir $targetDir
     Add-XML
-    Write-Host "$ADDON_NAME 安装成功, 当前文件夹可删除"
+    Write-Host "Successfully install $ADDON_NAME, the current folder can be deleted"
 }
 function Update-Addon() {
     $tempFile = 'temp.js'
     Invoke-RestMethod 'https://raw.kkgithub.com/Cubxx/wps-paper/main/config.js' -OutFile $tempFile 
     $NEW_NAME, $NEW_VERSION = Get-AddonInfo $tempFile
+    Remove-Item $tempFile
     if ($NEW_VERSION -eq $VERSION) {
-        Write-Host "当前版本 $VERSION 已是最新版本"
+        Write-Host "Current version is latest: $VERSION"
     }
     else {
         $tempZip = 'temp.zip'
         Invoke-WebRequest 'https://api.kkgithub.com/repos/Cubxx/wps-paper/zipball' -OutFile $tempZip
         $targetDir = Join-Path $env:TEMP $NEW_NAME
         Expand-Archive $tempZip $targetDir -Force
+        Remove-Item $tempZip
 
         $global:NAME, $global:VERSION = $NEW_NAME, $NEW_VERSION
         $global:ADDON_NAME = $global:NAME + '_' + $global:VERSION
         $srcDir = (Get-ChildItem -Path $targetDir -Directory | Select-Object -First 1).FullName 
         Install-Addon $srcDir
         
-        Remove-Item $tempZip
         Remove-Item $targetDir -Recurse -Force
     }
-    Remove-Item $tempFile
-    Write-Host "$ADDON_NAME 更新成功, 当前文件夹可删除"
+    Write-Host "Successfully update $ADDON_NAME, the current folder can be deleted"
 }
 function Uninstall-Addon() {
     Remove-Dir $JSADDON_DIR
     Remove-XML
-    Write-Host "$ADDON_NAME 卸载成功, 当前文件夹可删除"
+    Write-Host "Successfully uninstall $ADDON_NAME, the current folder can be deleted"
 }
 
 try {
-    if ($JSADDON_DIR -in $FILE) {
-        throw "无法在当前文件夹下操作"
+    if ($FILE -like "$JSADDON_DIR*") {
+        throw "Cannot run in the current folder"
     }
-    $option = Select-Option "欢迎使用 WPS 加载项安装向导" @(
-        @{title = "安装"; fn = { Install-Addon (Split-Path -Path $FILE -Parent) } }, 
-        @{title = "更新（需要联网）"; fn = { Update-Addon } }, 
-        @{title = "卸载"; fn = { Uninstall-Addon } }
+    $option = Select-Option "Welcome to WPS addon installation guide" @(
+        @{title = "Install"; fn = { Install-Addon (Split-Path -Path $FILE -Parent) } }, 
+        @{title = "Update (Need networking)"; fn = { Update-Addon } }, 
+        @{title = "Uninstall"; fn = { Uninstall-Addon } }
     ) "title"
     $NAME, $VERSION = Get-AddonInfo "config.js"
     $ADDON_NAME = $NAME + '_' + $VERSION
@@ -154,4 +156,4 @@ try {
 catch {
     Write-Error $_
 }
-Read-Host "按任意键退出"
+Read-Host "Press any key to exit"

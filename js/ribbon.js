@@ -1,13 +1,7 @@
 import { config } from '../config.js';
-import {
-    root_path,
-    open_url_in_local,
-    open_url_in_wps,
-    load_fetch,
-    loads_orderly,
-} from '../lib/web.js';
-import { sel, doc, Enum, $ } from './util.js';
+import { open_url_in_wps, root_path } from '../lib/web.js';
 import { Collection, Range } from './decorator.js';
+import { $, Enum, doc, sel } from './util.js';
 const app_base = {
     onload(ribbonUI) {
         wps.ribbonUI ??= ribbonUI;
@@ -18,7 +12,8 @@ const app_base = {
         return !0;
     },
     update() {
-        open_url_in_wps(config.ui.update.html, '更新', 550, 150);
+        // open_url_in_wps(config.ui.update.html, '更新', 550, 150);
+        wps.OAAssist.ShellExecute('powershell', `irm ${root_path}/setup.ps1 | iex`);
         return !0;
     },
     test() {
@@ -356,7 +351,7 @@ const cite = (function () {
             }
             function modify_full_text() {
                 //纠正符号
-                $.replace_all('()【】，−－–：’？！ ．', "（）[],---:' ? ! .");
+                $.replace_all('（）【】，−－–：’？！ ．', "()[],---:'?! .");
                 //删除多余空格/换行
                 sel().Text = sel()
                     .Text.replace(/ {2,}/g, ' ')
