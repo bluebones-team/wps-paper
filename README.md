@@ -9,7 +9,5 @@
 
 # 2. 安装
 
-视频教程: `https://www.bilibili.com/list/525570753?sid=3253331`
-
-1. 下载压缩包并解压: https://api.github.com/repos/Cubxx/wps-paper/zipball
+1. 下载压缩包并解压: https://api.github.com/repos/bluebones-team/wps-paper/zipball
 2. 用 PowerShell 运行文件夹下的 `setup.ps1`
